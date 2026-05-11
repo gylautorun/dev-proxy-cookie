@@ -123,6 +123,17 @@ run_tests() {
   success "测试通过"
 }
 
+# 运行构建
+run_build() {
+  info "执行构建..."
+  npm run build
+  if [ ! -d "dist" ]; then
+    error "构建失败，dist 目录不存在"
+    exit 1
+  fi
+  success "构建成功"
+}
+
 # 运行类型检查
 run_lint() {
   info "执行类型检查..."
@@ -189,8 +200,8 @@ publish_to_npm() {
     info "检测到 .npmrc 配置文件"
   fi
   
-  # 执行发布
-  npm publish --tag "$tag"
+  # 执行发布，使用 --ignore-scripts 跳过 prepublishOnly 钩子（脚本已执行过检查）
+  npm publish --tag "$tag" --ignore-scripts
   
   # 创建 git tag
   git tag "v$new_version"
@@ -202,7 +213,7 @@ publish_to_npm() {
 # 发布到 npm 测试环境
 publish_to_npm_test() {
   info "发布到 npm 测试环境..."
-  npm publish --tag test
+  npm publish --tag test --ignore-scripts
   success "测试环境发布成功"
 }
 
@@ -261,6 +272,9 @@ main() {
 
   # 版本升级
   bump_version
+
+  # 执行构建（在版本升级后，发布确认前）
+  run_build
 
   # 确认发布
   confirm_publish
