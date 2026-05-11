@@ -1,0 +1,1 @@
+JSESSIONID=demo-cookie-123; user=demo-user

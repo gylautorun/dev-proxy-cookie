@@ -1,0 +1,3 @@
+# 开发环境登录 Cookie
+# 格式: key1=value1; key2=value2; ...
+JSESSIONID=abc123; user=admin; token=xyz789
