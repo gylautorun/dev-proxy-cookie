@@ -46,6 +46,11 @@
   "peerDependencies": {
     "vite": ">=4.0.0"
   },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/http-proxy": "^1.17.14",
     "@types/jest": "^30.0.0",
