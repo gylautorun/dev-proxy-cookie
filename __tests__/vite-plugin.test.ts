@@ -126,9 +126,12 @@ describe('AutoProxyCookie hooks', () => {
     const mockReq = { url: '/api/test' } as any;
     const mockRes = {} as any;
 
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
     (autoProxy as any).handleOnError(mockErr, mockReq, mockRes);
 
     expect(onError).toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 
   test('should call onWsError hook', () => {
@@ -143,9 +146,12 @@ describe('AutoProxyCookie hooks', () => {
     const mockReq = { url: '/ws/test' } as any;
     const mockSocket = { close: jest.fn() };
 
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
     (autoProxy as any).handleOnWsError(mockErr, mockReq, mockSocket);
 
     expect(onWsError).toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 
   test('should merge custom hooks with default hooks', () => {
