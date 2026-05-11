@@ -29,34 +29,36 @@ function bumpVersion(currentVersion, type = 'patch', prerelease = null) {
   let currentPrerelease = match[4] || null;
   let prereleaseNum = parseInt(match[5], 10) || 0;
   
-  switch (type) {
-    case 'major':
-      major++;
-      minor = 0;
-      patch = 0;
-      prereleaseNum = 0;
-      break;
-    case 'minor':
-      minor++;
-      patch = 0;
-      prereleaseNum = 0;
-      break;
-    case 'patch':
-    default:
-      patch++;
-      prereleaseNum = 0;
-      break;
-  }
-  
+  // 如果是预发布版本（beta/alpha），保持版本号不变，只递增预发布编号
   if (prerelease) {
     if (currentPrerelease === prerelease) {
+      // 同一预发布类型，递增预发布编号
       prereleaseNum++;
     } else {
+      // 切换预发布类型，重置编号为1
       prereleaseNum = 1;
     }
     return `${major}.${minor}.${patch}-${prerelease}.${prereleaseNum}`;
   }
   
+  // 正式版本升级逻辑
+  switch (type) {
+    case 'major':
+      major++;
+      minor = 0;
+      patch = 0;
+      break;
+    case 'minor':
+      minor++;
+      patch = 0;
+      break;
+    case 'patch':
+    default:
+      patch++;
+      break;
+  }
+  
+  // 如果当前是预发布版本，升级到正式版本时去掉预发布标记
   if (currentPrerelease) {
     return `${major}.${minor}.${patch}`;
   }

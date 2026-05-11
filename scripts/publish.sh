@@ -116,17 +116,6 @@ check_dependencies() {
   success "依赖已安装"
 }
 
-# 运行构建
-run_build() {
-  info "执行构建..."
-  npm run build
-  if [ ! -d "dist" ]; then
-    error "构建失败，dist 目录不存在"
-    exit 1
-  fi
-  success "构建成功"
-}
-
 # 运行测试
 run_tests() {
   info "执行测试..."
@@ -269,9 +258,6 @@ main() {
 
   # 运行测试
   run_tests
-
-  # 执行构建
-  run_build
 
   # 版本升级
   bump_version
