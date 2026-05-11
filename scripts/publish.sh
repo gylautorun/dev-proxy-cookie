@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# dev-proxy-cookie npm 发布脚本
+# dev-proxy-cookie npm 自动化发布脚本
 # 自动化发布流程：检查 → 构建 → 测试 → 版本升级 → 发布
 # ==============================================================================
 
@@ -43,9 +43,29 @@ check_command() {
 check_npm_login() {
   info "检查 npm 登录状态..."
   if ! npm whoami &> /dev/null; then
-    warning "尚未登录 npm，请先登录"
+    warning "尚未登录 npm，尝试自动登录..."
+    
+    # 检查是否有 .npmrc 配置文件
+    if [ -f "$HOME/.npmrc" ]; then
+      info "检测到 $HOME/.npmrc 配置文件，检查认证信息..."
+      if grep -q "//registry.npmjs.org/:_authToken" "$HOME/.npmrc"; then
+        success "npm 已通过配置文件认证"
+        return
+      fi
+    fi
+    
+    if [ -f ".npmrc" ]; then
+      info "检测到项目 .npmrc 配置文件，检查认证信息..."
+      if grep -q "//registry.npmjs.org/:_authToken" ".npmrc"; then
+        success "npm 已通过项目配置文件认证"
+        return
+      fi
+    fi
+    
+    warning "未找到 npm 认证信息，请手动登录"
     info "正在执行 npm login..."
     npm login
+    
     if ! npm whoami &> /dev/null; then
       error "npm 登录失败"
       exit 1
@@ -121,21 +141,33 @@ run_lint() {
   success "类型检查通过"
 }
 
+# 获取当前版本
+get_current_version() {
+  node -p "require('./package.json').version"
+}
+
 # 版本升级
 bump_version() {
+  local current_version=$(get_current_version)
+  
+  info "当前版本: $current_version"
   info "版本升级选项:"
-  echo "  1) patch (1.0.0 → 1.0.1) - 修复bug"
-  echo "  2) minor (1.0.0 → 1.1.0) - 添加新功能"
-  echo "  3) major (1.0.0 → 2.0.0) - 重大变更/不兼容"
-  echo "  4) 自定义版本号"
-  read -p "请选择版本升级类型 (1-4): " -n 1 -r
+  echo "  1) patch   ($current_version → X.X.X+1)    - 修复 bug"
+  echo "  2) minor   ($current_version → X.X+1.0)    - 添加新功能"
+  echo "  3) major   ($current_version → X+1.0.0)    - 重大变更/不兼容"
+  echo "  4) beta    ($current_version → X.X.X+1-beta.1) - Beta 测试版"
+  echo "  5) alpha   ($current_version → X.X.X+1-alpha.1) - Alpha 测试版"
+  echo "  6) 自定义版本号"
+  read -p "请选择版本升级类型 (1-6): " -n 1 -r
   echo
 
   case $REPLY in
     1) npm version patch ;;
     2) npm version minor ;;
     3) npm version major ;;
-    4) 
+    4) npm run bump:beta ;;
+    5) npm run bump:alpha ;;
+    6) 
       read -p "请输入新版本号: " VERSION
       npm version "$VERSION" --no-git-tag-version
       ;;
@@ -145,13 +177,23 @@ bump_version() {
       ;;
   esac
 
-  NEW_VERSION=$(node -p "require('./package.json').version")
-  success "版本已升级为: $NEW_VERSION"
+  local new_version=$(get_current_version)
+  success "版本已升级为: $new_version"
 }
 
 # 发布到 npm
 publish_to_npm() {
-  info "发布到 npm..."
+  local new_version=$(get_current_version)
+  local tag="latest"
+  
+  # 如果是预发布版本，使用对应的 tag
+  if [[ "$new_version" == *"-beta"* ]]; then
+    tag="beta"
+  elif [[ "$new_version" == *"-alpha"* ]]; then
+    tag="alpha"
+  fi
+  
+  info "发布到 npm (tag: $tag)..."
   
   # 检查是否有 npmrc 配置
   if [ -f ".npmrc" ]; then
@@ -159,14 +201,13 @@ publish_to_npm() {
   fi
   
   # 执行发布
-  npm publish
+  npm publish --tag "$tag"
   
   # 创建 git tag
-  NEW_VERSION=$(node -p "require('./package.json').version")
-  git tag "v$NEW_VERSION"
-  git push origin "v$NEW_VERSION"
+  git tag "v$new_version"
+  git push origin "v$new_version"
   
-  success "发布成功！版本: v$NEW_VERSION"
+  success "发布成功！版本: v$new_version (tag: $tag)"
 }
 
 # 发布到 npm 测试环境
@@ -176,17 +217,40 @@ publish_to_npm_test() {
   success "测试环境发布成功"
 }
 
+# 确认发布
+confirm_publish() {
+  local new_version=$(get_current_version)
+  
+  echo
+  echo "=========================================="
+  echo "          发布确认信息"
+  echo "=========================================="
+  echo "发布版本: v$new_version"
+  echo "发布标签: $(if [[ "$new_version" == *"-"* ]]; then echo "beta/alpha"; else echo "latest"; fi)"
+  echo "=========================================="
+  
+  read -p "确认发布到 npm 吗? (y/N) " -n 1 -r
+  echo
+  
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    info "已取消发布"
+    exit 0
+  fi
+}
+
 # 主流程
 main() {
   echo "=========================================="
-  echo "  dev-proxy-cookie npm 发布脚本"
+  echo "  dev-proxy-cookie npm 自动化发布脚本"
   echo "=========================================="
   echo
 
   # 检查必要命令
+  info "检查必要命令..."
   check_command "npm"
   check_command "git"
   check_command "node"
+  success "命令检查通过"
 
   # 检查 npm 登录
   check_npm_login
@@ -212,6 +276,9 @@ main() {
   # 版本升级
   bump_version
 
+  # 确认发布
+  confirm_publish
+
   # 询问是否发布到测试环境
   read -p "是否先发布到测试环境? (y/N) " -n 1 -r
   echo
@@ -232,8 +299,10 @@ main() {
   echo "=========================================="
   success "发布流程完成！"
   echo "=========================================="
-  echo "发布版本: v$(node -p "require('./package.json').version")"
+  local final_version=$(get_current_version)
+  echo "发布版本: v$final_version"
   echo "npm 包地址: https://www.npmjs.com/package/dev-proxy-cookie"
+  echo "安装命令: npm install dev-proxy-cookie@${final_version}"
   echo
 }
 
