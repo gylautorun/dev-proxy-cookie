@@ -31,7 +31,7 @@ yarn add dev-proxy-cookie
 const path = require('path');
 const { createVueProxyConfig, createFileCookieGetter } = require('dev-proxy-cookie');
 
-const _target = 'http://10.17.53.3/';
+const _target = 'http://10.17.33.33/';
 const cookieFile = path.resolve(__dirname, './cookie.txt');
 const getCookie = createFileCookieGetter(cookieFile);
 
@@ -62,7 +62,7 @@ const getCookie = createFileCookieGetter('./cookie.txt', {
 module.exports = {
   devServer: {
     proxy: createAutoProxyConfig({
-      target: 'http://10.17.53.3:10000',
+      target: 'http://10.17.33.33:10000',
       getCookie,
       debug: true,
       // WebSocket 支持
@@ -86,8 +86,8 @@ module.exports = {
   
       // 自定义请求头
       headers: {
-        host: '10.17.53.3:10000',
-        origin: 'http://10.17.53.3:10000',
+        host: '10.17.33.33',
+        origin: 'http://10.17.33.33',
       },
   
       // 钩子函数
@@ -118,7 +118,7 @@ export default defineConfig({
     viteAutoProxyCookie({
       // 必需配置
       cookieFile: './cookie.txt',
-      target: 'http://10.17.53.3:10000',
+      target: 'http://10.17.33.33',
   
       // 调试模式
       debug: true,
