@@ -222,15 +222,13 @@ describe('createFileCookieGetter', () => {
   test('should return updated cookie after file changes', () => {
     jest.useFakeTimers();
     const getCookie = createFileCookieGetter(cookieFile);
-    
+
     expect(getCookie()).toBe('JSESSIONID=test');
-    
+
     fs.writeFileSync(cookieFile, 'JSESSIONID=updated');
     jest.runAllTimers();
-    
-    // Create a new getter to read the updated file
-    const getCookie2 = createFileCookieGetter(cookieFile);
-    expect(getCookie2()).toBe('JSESSIONID=updated');
+
+    expect(getCookie()).toBe('JSESSIONID=updated');
     jest.useRealTimers();
   });
 
@@ -291,7 +289,7 @@ describe('createVueProxyConfig', () => {
     const mockGetCookie = jest.fn().mockReturnValue('test-cookie');
     const config = createVueProxyConfig('http://localhost:8080', { getCookie: mockGetCookie });
 
-    const mockProxyReq = { setHeader: jest.fn() };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/api/test', method: 'GET' };
 
     config.onProxyReq(mockProxyReq, mockReq as any);
@@ -303,7 +301,7 @@ describe('createVueProxyConfig', () => {
     const mockGetCookie = jest.fn().mockReturnValue('');
     const config = createVueProxyConfig('http://localhost:8080', { getCookie: mockGetCookie });
 
-    const mockProxyReq = { setHeader: jest.fn() };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/api/test', method: 'GET' };
 
     config.onProxyReq(mockProxyReq, mockReq as any);
@@ -341,7 +339,7 @@ describe('createVueProxyConfig', () => {
     const mockGetCookie = jest.fn().mockReturnValue('new-cookie=value');
     const config = createVueProxyConfig('http://localhost:8080', { getCookie: mockGetCookie });
 
-    const mockProxyReq = { setHeader: jest.fn(), getHeader: jest.fn().mockReturnValue(null) };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn(), getHeader: jest.fn().mockReturnValue(null) };
     const mockReq = { url: '/api/test', method: 'GET' };
 
     config.onProxyReq(mockProxyReq, mockReq as any);
@@ -357,7 +355,7 @@ describe('createVueProxyConfig', () => {
 
   test('should handle null getCookie function', () => {
     const config = createVueProxyConfig('http://localhost:8080', { getCookie: null as any });
-    const mockProxyReq = { setHeader: jest.fn(), getHeader: jest.fn().mockReturnValue(null) };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn(), getHeader: jest.fn().mockReturnValue(null) };
     const mockReq = { url: '/api/test', method: 'GET' };
 
     config.onProxyReq(mockProxyReq, mockReq as any);

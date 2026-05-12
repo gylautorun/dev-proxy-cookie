@@ -90,7 +90,7 @@ describe('createAutoProxyConfig', () => {
       getCookie: mockGetCookie,
     });
 
-    const mockProxyReq = { setHeader: jest.fn() };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/api/users', method: 'GET' } as any;
 
     config['/'].onProxyReq(mockProxyReq, mockReq);
@@ -107,7 +107,7 @@ describe('createAutoProxyConfig', () => {
       getCookie: mockGetCookie,
     });
 
-    const mockProxyReq = { setHeader: jest.fn() };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/assets/style.css', method: 'GET' } as any;
 
     config['/'].onProxyReq(mockProxyReq, mockReq);
@@ -123,7 +123,7 @@ describe('createAutoProxyConfig', () => {
       getCookie: mockGetCookie,
     });
 
-    const mockProxyReq = { setHeader: jest.fn() };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/assets/style.css', method: 'GET' } as any;
 
     config['/'].onProxyReq(mockProxyReq, mockReq);
@@ -139,7 +139,7 @@ describe('createAutoProxyConfig', () => {
       getCookie: mockGetCookie,
     });
 
-    const mockProxyReq = { setHeader: jest.fn() };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/api/users', method: 'GET' } as any;
 
     config['/'].onProxyReq(mockProxyReq, mockReq);
@@ -156,7 +156,7 @@ describe('createAutoProxyConfig', () => {
       getCookie: mockGetCookie,
     });
 
-    const mockProxyReq = { setHeader: jest.fn() };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/api/users', method: 'GET' } as any;
 
     config['/'].onProxyReq(mockProxyReq, mockReq);
@@ -173,7 +173,7 @@ describe('createAutoProxyConfig', () => {
       getCookie: mockGetCookie,
     });
 
-    const mockProxyReq = { setHeader: jest.fn() };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/api/users', method: 'GET' } as any;
 
     config['/'].onProxyReq(mockProxyReq, mockReq);
@@ -189,7 +189,7 @@ describe('createAutoProxyConfig', () => {
       getCookie: mockGetCookie,
     });
 
-    const mockProxyReq = { setHeader: jest.fn() };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/api/users', method: 'GET' } as any;
 
     config['/'].onProxyReq(mockProxyReq, mockReq);
@@ -202,7 +202,7 @@ describe('createAutoProxyConfig', () => {
       target: 'http://localhost:8080',
     });
 
-    const mockProxyReq = { setHeader: jest.fn() };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/api/users', method: 'GET' } as any;
 
     config['/'].onProxyReq(mockProxyReq, mockReq);
@@ -220,7 +220,7 @@ describe('createAutoProxyConfig', () => {
       getCookie: mockGetCookie,
     });
 
-    const mockProxyReq = { setHeader: jest.fn() };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/api/users', method: 'GET' } as any;
 
     config['/api/'].onProxyReq(mockProxyReq, mockReq);

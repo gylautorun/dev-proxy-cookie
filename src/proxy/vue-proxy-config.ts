@@ -1,5 +1,19 @@
 import type { IncomingMessage } from 'http';
-import { CookieReader, CookieWatcher, watchCookieFile } from '../utils';
+import * as path from 'path';
+import { CookieReader, watchCookieFile } from '../utils';
+import { applyDevCookieHeader } from './apply-dev-cookie-header';
+
+/** Options for {@link createFileCookieGetter}. */
+export interface CreateFileCookieGetterOptions {
+  /**
+   * Watch the file for logging when it changes. Cookie value is always read from disk on each proxy request,
+   * so you do not need a dev-server restart when this is false.
+   * @default true
+   */
+  watch?: boolean;
+  /** Log when the cookie file changes (only if `watch` is true). @default false */
+  debug?: boolean;
+}
 
 export interface VueProxyConfigOptions {
   getCookie?: () => string;
@@ -45,7 +59,7 @@ export function createVueProxyConfig(
     onProxyReq: (proxyReq: any, req: IncomingMessage) => {
       const cookie = getCookie ? getCookie() : '';
       if (cookie) {
-        proxyReq.setHeader('Cookie', cookie);
+        applyDevCookieHeader(proxyReq, cookie);
       }
       if (debug) {
         const reqPath = req.url || '/';
@@ -60,22 +74,30 @@ export function createVueProxyConfig(
   return config;
 }
 
-export function createFileCookieGetter(cookieFile: string): () => string {
-  const reader = new CookieReader({ cookieFile });
-  let currentCookie = reader.readCookie();
+export function createFileCookieGetter(
+  cookieFile: string,
+  options: CreateFileCookieGetterOptions = {}
+): () => string {
+  const { watch = true, debug = false } = options;
+  const reader = new CookieReader({ cookieFile: path.resolve(cookieFile) });
 
-  const watcher = watchCookieFile(
-    cookieFile,
-    (newCookie) => {
-      currentCookie = newCookie;
-      console.log('[CookieFile] Updated:', newCookie ? '(has cookie)' : '(empty)');
-    },
-    (error) => {
-      console.error('[CookieFile] Watch error:', error.message);
-    }
-  );
+  if (watch) {
+    watchCookieFile(
+      path.resolve(cookieFile),
+      (newCookie) => {
+        if (debug) {
+          console.log('[CookieFile] Updated:', newCookie ? '(has cookie)' : '(empty)');
+        }
+      },
+      (error) => {
+        console.error('[CookieFile] Watch error:', error.message);
+      }
+    );
+  }
 
-  return () => currentCookie;
+  // Always read from disk so proxy uses the latest cookie even if fs "change" events were missed
+  // (e.g. editor atomic save → add/unlink instead of change).
+  return () => reader.readCookie();
 }
 
 export interface AutoProxyConfigOptions extends VueProxyConfigOptions {
@@ -109,7 +131,7 @@ export function createAutoProxyConfig(options: AutoProxyConfigOptions): Record<s
       
       const cookie = getCookie ? getCookie() : '';
       if (cookie) {
-        proxyReq.setHeader('Cookie', cookie);
+        applyDevCookieHeader(proxyReq, cookie);
       }
       if (debug) {
         console.log('[Proxy Request]', reqPath, req.method, cookie ? '(with cookie)' : '(no cookie)');

@@ -11,6 +11,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "install": "node scripts/ensure-dist.cjs",
     "build": "tsup src/index.ts --format cjs,esm --dts --clean",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "test": "jest",

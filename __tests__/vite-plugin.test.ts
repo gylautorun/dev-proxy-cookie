@@ -88,7 +88,7 @@ describe('AutoProxyCookie hooks', () => {
       hooks: { onProxyReq },
     });
 
-    const mockProxyReq = { setHeader: jest.fn(), getHeader: jest.fn().mockReturnValue(null) };
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn(), getHeader: jest.fn().mockReturnValue(null) };
     const mockReq = { url: '/api/test', method: 'GET' } as any;
     const mockRes = {} as any;
 

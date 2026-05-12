@@ -38,11 +38,12 @@ export class CookieWatcher {
       this.cookieReader.ensureCookieFile();
     }
 
+    const watchPath = path.resolve(this.options.cookieFile);
     this.lastContent = this.cookieReader.readCookie();
-    console.log(`[CookieWatcher] Started watching: ${this.options.cookieFile}`);
+    console.log(`[CookieWatcher] Started watching: ${watchPath}`);
 
     try {
-      this.watcher = chokidar.watch(this.options.cookieFile, {
+      this.watcher = chokidar.watch(watchPath, {
         persistent: true,
         ignoreInitial: true,
         awaitWriteFinish: {
@@ -51,7 +52,9 @@ export class CookieWatcher {
         },
       });
 
+      // "add" covers atomic replace (unlink + rename) used by some editors; "change" covers in-place writes
       this.watcher.on('change', this.handleChange);
+      this.watcher.on('add', this.handleChange);
       this.watcher.on('error', (error) => {
         this.options.onError?.(error);
       });

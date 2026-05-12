@@ -6,6 +6,7 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import type { ViteDevServer } from 'vite';
 import httpProxy from 'http-proxy';
 import { CookieReader, CookieWatcher, watchCookieFile } from '../utils';
+import { applyDevCookieHeader } from './apply-dev-cookie-header';
 
 export type ErrorCallback = (err: Error, req: IncomingMessage, res: ServerResponse | net.Socket) => void;
 
@@ -191,12 +192,7 @@ export class AutoProxyCookie {
 
   private handleOnProxyReq = (proxyReq: any, req: IncomingMessage, res: ServerResponse, _options: ServerOptions): void => {
     if (this.currentCookie) {
-      const existingCookie = proxyReq.getHeader('Cookie');
-      if (existingCookie) {
-        proxyReq.setHeader('Cookie', `${existingCookie}; ${this.currentCookie}`);
-      } else {
-        proxyReq.setHeader('Cookie', this.currentCookie);
-      }
+      applyDevCookieHeader(proxyReq, this.currentCookie);
     }
 
     this.log('debug', '[AutoProxyCookie] Proxy Request:', req.method, req.url);
