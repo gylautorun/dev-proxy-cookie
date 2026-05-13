@@ -29,8 +29,9 @@ describe('createAutoProxyConfig', () => {
       includePaths: ['/api/'],
     });
 
-    expect(config['/']).toBeDefined();
-    expect(config['/'].target).toBe('http://localhost:8080');
+    expect(config['/']).toBeUndefined();
+    expect(config['/api/']).toBeDefined();
+    expect(config['/api/'].target).toBe('http://localhost:8080');
   });
 
   test('should create config with getCookie', () => {
@@ -93,26 +94,25 @@ describe('createAutoProxyConfig', () => {
     const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const mockReq = { url: '/api/users', method: 'GET' } as any;
 
-    config['/'].onProxyReq(mockProxyReq, mockReq);
+    config['/api/'].onProxyReq(mockProxyReq, mockReq);
 
     expect(mockGetCookie).toHaveBeenCalled();
     expect(mockProxyReq.setHeader).toHaveBeenCalledWith('Cookie', 'test-cookie');
   });
 
-  test('should not inject cookie for excluded paths', () => {
-    const mockGetCookie = jest.fn().mockReturnValue('test-cookie');
+  test('should create multiple include paths', () => {
     const config = createAutoProxyConfig({
       target: 'http://localhost:8080',
-      includePaths: ['/api/'],
-      getCookie: mockGetCookie,
+      includePaths: ['/api/', '/digital-op/', '/examine/'],
     });
 
-    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
-    const mockReq = { url: '/assets/style.css', method: 'GET' } as any;
-
-    config['/'].onProxyReq(mockProxyReq, mockReq);
-
-    expect(mockProxyReq.setHeader).not.toHaveBeenCalled();
+    expect(config['/']).toBeUndefined();
+    expect(config['/api/']).toBeDefined();
+    expect(config['/digital-op/']).toBeDefined();
+    expect(config['/examine/']).toBeDefined();
+    expect(config['/api/'].target).toBe('http://localhost:8080');
+    expect(config['/digital-op/'].target).toBe('http://localhost:8080');
+    expect(config['/examine/'].target).toBe('http://localhost:8080');
   });
 
   test('should skip ignored paths', () => {
