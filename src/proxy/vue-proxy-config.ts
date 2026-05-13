@@ -40,9 +40,9 @@ export function createVueProxyConfig(
   target: string,
   options: VueProxyConfigOptions = {}
 ): ProxyConfig {
-  const { 
-    getCookie, 
-    debug = false, 
+  const {
+    getCookie,
+    debug = false,
     headers = {},
     ws = false,
     changeOrigin = true,
@@ -95,8 +95,6 @@ export function createFileCookieGetter(
     );
   }
 
-  // Always read from disk so proxy uses the latest cookie even if fs "change" events were missed
-  // (e.g. editor atomic save → add/unlink instead of change).
   return () => reader.readCookie();
 }
 
@@ -110,41 +108,40 @@ export interface AutoProxyConfigOptions extends VueProxyConfigOptions {
 export function createAutoProxyConfig(options: AutoProxyConfigOptions): Record<string, ProxyConfig> {
   const { target, ignorePaths = [], includePaths = [], additionalProxies = {}, getCookie, debug, headers } = options;
 
-  const defaultProxy: ProxyConfig = {
-    ws: false,
-    target,
-    changeOrigin: true,
-    secure: false,
-    headers,
-    onProxyReq: (proxyReq: any, req: IncomingMessage) => {
-      const reqPath = req.url || '/';
-      
-      if (includePaths.length > 0) {
-        if (!includePaths.some(path => reqPath.startsWith(path))) {
-          return;
-        }
-      } else {
-        if (ignorePaths.some(path => reqPath.startsWith(path))) {
-          return;
-        }
-      }
-      
-      const cookie = getCookie ? getCookie() : '';
-      if (cookie) {
-        applyDevCookieHeader(proxyReq, cookie);
-      }
-      if (debug) {
-        console.log('[Proxy Request]', reqPath, req.method, cookie ? '(with cookie)' : '(no cookie)');
-      }
-    },
-    onError: (err: Error) => {
-      console.error('\n[Proxy Error]', err.message);
-    },
-  };
+  const result: Record<string, ProxyConfig> = {};
 
-  const result: Record<string, ProxyConfig> = {
-    '/': defaultProxy,
-  };
+  if (includePaths.length > 0) {
+    for (const proxyPath of includePaths) {
+      result[proxyPath] = createVueProxyConfig(target, { getCookie, debug, headers });
+    }
+  } else {
+    const defaultProxy: ProxyConfig = {
+      ws: false,
+      target,
+      changeOrigin: true,
+      secure: false,
+      headers,
+      onProxyReq: (proxyReq: any, req: IncomingMessage) => {
+        const reqPath = req.url || '/';
+
+        if (ignorePaths.some(p => reqPath.startsWith(p))) {
+          return;
+        }
+
+        const cookie = getCookie ? getCookie() : '';
+        if (cookie) {
+          applyDevCookieHeader(proxyReq, cookie);
+        }
+        if (debug) {
+          console.log('[Proxy Request]', reqPath, req.method, cookie ? '(with cookie)' : '(no cookie)');
+        }
+      },
+      onError: (err: Error) => {
+        console.error('\n[Proxy Error]', err.message);
+      },
+    };
+    result['/'] = defaultProxy;
+  }
 
   for (const [proxyPath, proxyTarget] of Object.entries(additionalProxies)) {
     result[proxyPath] = createVueProxyConfig(proxyTarget, { getCookie, debug, headers });
