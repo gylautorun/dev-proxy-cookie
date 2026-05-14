@@ -22,7 +22,7 @@
 | **双向模式**        | 支持白名单模式（`includePaths`）和黑名单模式（`ignorePaths`）      | 灵活控制代理范围           |
 | **钩子函数**        | 支持 `onProxyReq`、`onProxyRes`、`onError`、`onWsError` 等钩子 | 自定义代理行为             |
 | **WebSocket 支持**  | 完整支持 WebSocket 代理                                                | 实时通信场景               |
-| **智能环境检测**    | 自动检测开发/生产环境，生产环境自动禁用监听避免进程不退出               | 构建脚本集成               |
+| **智能环境检测**    | 自动检测开发/生产环境，生产环境自动禁用监听避免进程不退出              | 构建脚本集成               |
 
 ## 三、项目优势
 
@@ -184,9 +184,9 @@ export function viteAutoProxyCookie(options): Plugin {
 ### 6.1 安装
 
 ```bash
-npm install dev-proxy-cookie
+npm install @gylautorun/dev-proxy-cookie --save-dev
 # 或
-pnpm add dev-proxy-cookie
+pnpm add @gylautorun/dev-proxy-cookie -D
 ```
 
 ### 6.2 Vue CLI 项目配置
@@ -194,7 +194,7 @@ pnpm add dev-proxy-cookie
 **方式一：标准代理配置**
 
 ```javascript
-const { createVueProxyConfig, createFileCookieGetter } = require('dev-proxy-cookie');
+const { createVueProxyConfig, createFileCookieGetter } = require('@gylautorun/dev-proxy-cookie');
 
 module.exports = {
   devServer: {
@@ -210,7 +210,7 @@ module.exports = {
 **方式二：自动代理所有接口**
 
 ```javascript
-const { createAutoProxyConfig, createFileCookieGetter } = require('dev-proxy-cookie');
+const { createAutoProxyConfig, createFileCookieGetter } = require('@gylautorun/dev-proxy-cookie');
 
 module.exports = {
   devServer: {
@@ -232,7 +232,7 @@ module.exports = {
 **方式一：自动代理模式**
 
 ```javascript
-import { viteAutoProxyCookie } from 'dev-proxy-cookie';
+import { viteAutoProxyCookie } from '@gylautorun/dev-proxy-cookie';
 
 export default defineConfig({
   plugins: [
@@ -250,7 +250,7 @@ export default defineConfig({
 **方式二：基础 Cookie 注入**
 
 ```javascript
-import { viteDevProxyCookie } from 'dev-proxy-cookie';
+import { viteDevProxyCookie } from '@gylautorun/dev-proxy-cookie';
 
 export default defineConfig({
   plugins: [
@@ -310,19 +310,19 @@ dos-session-id=YWQxMWUwMTktZjI4Yi00NzNm
 
 ### 7.4 配置选项
 
-| 选项             | 类型              | 默认值 | 说明                          |
-| ---------------- | ----------------- | ------ | ----------------------------- |
-| `cookieFile`   | string            | -      | Cookie 文件路径               |
-| `target`       | string            | -      | 代理目标地址                  |
-| `debug`        | boolean           | false  | 调试模式                      |
-| `ws`           | boolean           | true   | WebSocket 支持                |
-| `changeOrigin` | boolean           | true   | 改变请求来源                  |
-| `secure`       | boolean           | false  | 验证 SSL 证书                 |
-| `ignorePaths`  | string[]          | []     | 忽略路径列表                  |
-| `includePaths` | string[]          | []     | 白名单路径列表                |
-| `hooks`        | object            | -      | 钩子函数配置                  |
-| `watch`        | boolean \| 'auto' | 'auto' | 文件监听模式                  |
-| `isDev`        | boolean           | -      | **最高优先级**：直接控制环境模式 |
+| 选项             | 类型             | 默认值 | 说明                                   |
+| ---------------- | ---------------- | ------ | -------------------------------------- |
+| `cookieFile`   | string           | -      | Cookie 文件路径                        |
+| `target`       | string           | -      | 代理目标地址                           |
+| `debug`        | boolean          | false  | 调试模式                               |
+| `ws`           | boolean          | true   | WebSocket 支持                         |
+| `changeOrigin` | boolean          | true   | 改变请求来源                           |
+| `secure`       | boolean          | false  | 验证 SSL 证书                          |
+| `ignorePaths`  | string[]         | []     | 忽略路径列表                           |
+| `includePaths` | string[]         | []     | 白名单路径列表                         |
+| `hooks`        | object           | -      | 钩子函数配置                           |
+| `watch`        | boolean\| 'auto' | 'auto' | 文件监听模式                           |
+| `isDev`        | boolean          | -      | **最高优先级**：直接控制环境模式 |
 
 ### 7.5 参数优先级
 
@@ -330,13 +330,13 @@ dos-session-id=YWQxMWUwMTktZjI4Yi00NzNm
 isDev (最高) → watch → 智能环境检测 (最低)
 ```
 
-| 场景                              | isDev | watch | 结果 |
-| --------------------------------- | ----- | ----- | ---- |
-| 开发环境（强制）                  | true  | -     | ✅ 启用监听 |
-| 生产环境（强制）                  | false | -     | ❌ 禁用监听 |
-| 开发环境（手动）                  | -     | true  | ✅ 启用监听 |
-| 生产环境（手动）                  | -     | false | ❌ 禁用监听 |
-| 自动检测                          | -     | 'auto' | 根据环境自动判断 |
+| 场景             | isDev | watch  | 结果             |
+| ---------------- | ----- | ------ | ---------------- |
+| 开发环境（强制） | true  | -      | ✅ 启用监听      |
+| 生产环境（强制） | false | -      | ❌ 禁用监听      |
+| 开发环境（手动） | -     | true   | ✅ 启用监听      |
+| 生产环境（手动） | -     | false  | ❌ 禁用监听      |
+| 自动检测         | -     | 'auto' | 根据环境自动判断 |
 
 ## 八、最佳实践
 
@@ -491,10 +491,10 @@ const getCookie = createFileCookieGetter('./cookie.txt', {
 
 **行为说明**：
 
-| 场景 | isDev 值 | 监听状态 | 进程退出 |
-|------|---------|----------|----------|
-| `npm run serve` | true | ✅ 启用 | - |
-| `npm run build` | false | ❌ 禁用 | ✅ 正常退出 |
+| 场景              | isDev 值 | 监听状态 | 进程退出    |
+| ----------------- | -------- | -------- | ----------- |
+| `npm run serve` | true     | ✅ 启用  | -           |
+| `npm run build` | false    | ❌ 禁用  | ✅ 正常退出 |
 
 ### 10.2 ESLint 报错问题
 
