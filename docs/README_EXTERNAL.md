@@ -370,3 +370,89 @@ A：启用 `debug: true` 选项，控制台会输出详细日志。也可在 `ho
 | `chokidar`   | ^3.5.3  | 文件监听              |
 | `http-proxy` | ^1.18.1 | HTTP 代理             |
 | `vite`       | >=4.0.0 | Vite 插件支持（可选） |
+
+
+
+
+## 十一、例子
+
+* `vue.config.js`配置
+
+```js
+const { createAutoProxyConfig, createFileCookieGetter } = require('@gylautorun/dev-proxy-cookie');
+
+const proxyPath = 'http://10.17.53.3/';
+const proxyConfig = createAutoProxyConfig({
+  target: proxyPath,
+  includePaths: [
+    '/cas',
+    '/filerisk',
+    '/api',
+    '/flowablecas',
+    '/usercenter',
+    '/flowable/',
+    '/gdfile/',
+    '/gdAdapter/',
+    '/flowable-ui/',
+    '/irs-file/',
+    '/dos-api/',
+    '/dos-system-manage/',
+  ],
+  getCookie: createFileCookieGetter(path.resolve(__dirname, './cookie.txt'), {
+    watch: true, // 监听文件变化自动更新
+    debug: true, // 输出调试日志
+  }),
+  debug: process.env.NODE_ENV === 'development',
+  headers: {
+    host: proxyPath,
+    origin: proxyPath,
+  },
+  additionalProxies: {
+    '^/dos-formgenerator': {
+      target: proxyPath,
+      changeOrigin: true,
+      ws: false,
+    },
+  },
+});
+
+module.exports = {
+  devServer: {
+    host: '0.0.0.0',
+    port: '8883',
+    https: false,
+    disableHostCheck: true,
+    hot: true,
+    liveReload: true,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    },
+    proxy: proxyConfig,
+  },
+};
+```
+
+* `cookie.txt`
+
+```plaintext
+# ============================================================
+# 开发环境 Cookie 配置文件
+# ============================================================
+# 说明：
+#   1. 每行一个 Cookie 键值对
+#   2. 以 # 开头的行是注释
+#   3. Cookie 值末尾的分号可选
+#   4. 修改此文件后，代理会自动更新 Cookie（无需重启服务器）
+# ============================================================
+
+# IRS 会话凭证
+uc_session_pre=ttcm==; irs-session-id=c4MmQzN2Jh; dos-session-id=OWRm
+
+# ============================================================
+# 使用说明：
+# 1. 打开浏览器登录目标系统
+# 2. 在开发者工具中复制 Cookie
+# 3. 将 Cookie 粘贴到下面（格式：key=value）
+# 4. 保存文件，代理会自动加载新的 Cookie
+# ============================================================
+```
