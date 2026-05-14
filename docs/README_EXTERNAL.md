@@ -9,6 +9,7 @@
 - 无需在浏览器中手动登录即可访问需要认证的后端接口
 - Cookie 文件变化时自动重载，无需重启开发服务器
 - 支持 Vue CLI 和 Vite 两大主流构建工具
+- 智能环境检测，自动处理开发/生产环境差异
 
 ## 二、核心能力
 
@@ -21,6 +22,7 @@
 | **双向模式**        | 支持白名单模式（`includePaths`）和黑名单模式（`ignorePaths`）      | 灵活控制代理范围           |
 | **钩子函数**        | 支持 `onProxyReq`、`onProxyRes`、`onError`、`onWsError` 等钩子 | 自定义代理行为             |
 | **WebSocket 支持**  | 完整支持 WebSocket 代理                                                | 实时通信场景               |
+| **智能环境检测**    | 自动检测开发/生产环境，生产环境自动禁用监听避免进程不退出               | 构建脚本集成               |
 
 ## 三、项目优势
 
@@ -39,6 +41,7 @@
 3. **灵活性**：支持多种配置模式（白名单/黑名单/自定义代理）
 4. **跨框架**：同时支持 Vue CLI 和 Vite 项目
 5. **完整的代理能力**：支持 WebSocket、自定义请求头、路径重写等
+6. **智能环境适配**：自动处理开发/生产环境，避免构建进程不退出
 
 ## 四、项目结构
 
@@ -53,7 +56,8 @@ dev-proxy-cookie/
 │   │   └── apply-dev-cookie-header.ts  # Cookie 头注入工具函数
 │   ├── utils/                    # 工具模块
 │   │   ├── cookie-reader.ts      # Cookie 文件读取器（支持注释过滤）
-│   │   └── cookie-watcher.ts     # Cookie 文件监听器（基于 chokidar）
+│   │   ├── cookie-watcher.ts     # Cookie 文件监听器（基于 chokidar）
+│   │   └── env-detector.ts       # 环境检测工具（新增）
 │   └── index.ts                  # 主导出入口
 ├── demo/                         # 示例项目
 │   ├── vite-demo/                # Vite 示例
@@ -114,7 +118,29 @@ export class CookieWatcher {
 - 支持编辑器的原子写入（unlink + rename）
 - 防抖处理避免频繁触发
 
-### 5.3 Cookie 头注入（apply-dev-cookie-header.ts）
+### 5.3 环境检测工具（env-detector.ts）【新增】
+
+```typescript
+export function detectProductionEnvironment(
+  customEnvs: string[] = [],
+  debug: boolean = false,
+  loggerPrefix: string = '[env-detector]'
+): boolean {
+  // 检查多种环境变量：NODE_ENV, BUILD_MODE, VUE_APP_ENV, VITE_NODE_ENV 等
+  // 检查 CI 环境标识
+  // 检查 npm 生命周期事件（build, prod, release）
+  // 检查进程参数（--mode=production, --prod）
+}
+```
+
+**设计要点**：
+
+- 不依赖单一环境变量，提高通用性
+- 支持自定义环境变量列表
+- 自动检测 CI/CD 环境
+- 检测构建命令参数
+
+### 5.4 Cookie 头注入（apply-dev-cookie-header.ts）
 
 ```typescript
 export function applyDevCookieHeader(proxyReq, cookie): void {
@@ -131,7 +157,7 @@ export function applyDevCookieHeader(proxyReq, cookie): void {
 - 统一使用大写 `Cookie` 头
 - 解决浏览器 Cookie 与文件 Cookie 冲突问题
 
-### 5.4 Vite 自动代理插件（vite-plugin.ts）
+### 5.5 Vite 自动代理插件（vite-plugin.ts）
 
 ```typescript
 export function viteAutoProxyCookie(options): Plugin {
@@ -190,7 +216,10 @@ module.exports = {
   devServer: {
     proxy: createAutoProxyConfig({
       target: 'http://10.17.33.33',
-      getCookie: createFileCookieGetter('./cookie.txt', { watch: true }),
+      getCookie: createFileCookieGetter('./cookie.txt', { 
+        watch: true,
+        isDev: process.env.NODE_ENV === 'development', // 关键配置
+      }),
       ignorePaths: ['/assets/', '/public/'],
       debug: true,
     }),
@@ -211,6 +240,7 @@ export default defineConfig({
       cookieFile: './cookie.txt',
       target: 'http://10.17.33.33',
       ignorePaths: ['/assets/', '/public/'],
+      isDev: process.env.NODE_ENV === 'development', // 关键配置
       debug: true,
     }),
   ],
@@ -226,6 +256,7 @@ export default defineConfig({
   plugins: [
     viteDevProxyCookie({
       cookieFile: './cookie.txt',
+      isDev: process.env.NODE_ENV === 'development', // 关键配置
       onCookieChange: (cookie) => {
         console.log('Cookie updated:', cookie);
       },
@@ -279,17 +310,33 @@ dos-session-id=YWQxMWUwMTktZjI4Yi00NzNm
 
 ### 7.4 配置选项
 
-| 选项             | 类型     | 默认值 | 说明            |
-| ---------------- | -------- | ------ | --------------- |
-| `cookieFile`   | string   | -      | Cookie 文件路径 |
-| `target`       | string   | -      | 代理目标地址    |
-| `debug`        | boolean  | false  | 调试模式        |
-| `ws`           | boolean  | true   | WebSocket 支持  |
-| `changeOrigin` | boolean  | true   | 改变请求来源    |
-| `secure`       | boolean  | false  | 验证 SSL 证书   |
-| `ignorePaths`  | string[] | []     | 忽略路径列表    |
-| `includePaths` | string[] | []     | 白名单路径列表  |
-| `hooks`        | object   | -      | 钩子函数配置    |
+| 选项             | 类型              | 默认值 | 说明                          |
+| ---------------- | ----------------- | ------ | ----------------------------- |
+| `cookieFile`   | string            | -      | Cookie 文件路径               |
+| `target`       | string            | -      | 代理目标地址                  |
+| `debug`        | boolean           | false  | 调试模式                      |
+| `ws`           | boolean           | true   | WebSocket 支持                |
+| `changeOrigin` | boolean           | true   | 改变请求来源                  |
+| `secure`       | boolean           | false  | 验证 SSL 证书                 |
+| `ignorePaths`  | string[]          | []     | 忽略路径列表                  |
+| `includePaths` | string[]          | []     | 白名单路径列表                |
+| `hooks`        | object            | -      | 钩子函数配置                  |
+| `watch`        | boolean \| 'auto' | 'auto' | 文件监听模式                  |
+| `isDev`        | boolean           | -      | **最高优先级**：直接控制环境模式 |
+
+### 7.5 参数优先级
+
+```
+isDev (最高) → watch → 智能环境检测 (最低)
+```
+
+| 场景                              | isDev | watch | 结果 |
+| --------------------------------- | ----- | ----- | ---- |
+| 开发环境（强制）                  | true  | -     | ✅ 启用监听 |
+| 生产环境（强制）                  | false | -     | ❌ 禁用监听 |
+| 开发环境（手动）                  | -     | true  | ✅ 启用监听 |
+| 生产环境（手动）                  | -     | false | ❌ 禁用监听 |
+| 自动检测                          | -     | 'auto' | 根据环境自动判断 |
 
 ## 八、最佳实践
 
@@ -337,17 +384,69 @@ user-id=12345
 user-name=developer
 ```
 
+### 8.4 构建脚本配置
+
+**package.json**：
+
+```json
+{
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "build:dev": "vue-cli-service build --mode development"
+  }
+}
+```
+
+**vue.config.js**：
+
+```javascript
+const { createAutoProxyConfig, createFileCookieGetter } = require('dev-proxy-cookie');
+
+module.exports = {
+  devServer: {
+    proxy: createAutoProxyConfig({
+      target: 'http://10.17.33.33',
+      getCookie: createFileCookieGetter('./cookie.txt', {
+        isDev: process.env.NODE_ENV === 'development', // 关键配置
+        debug: true,
+      }),
+    }),
+  },
+};
+```
+
 ## 九、常见问题
 
-**Q1：Cookie 文件修改后没有生效？**
+**Q1：构建完成后进程不退出？**
+
+A：这是因为文件监听器（chokidar）在生产环境下仍在运行。解决方案：
+
+1. **推荐方案**：使用 `isDev` 参数明确控制环境
+
+```javascript
+createFileCookieGetter('./cookie.txt', {
+  isDev: process.env.NODE_ENV === 'development',
+});
+```
+
+2. **备选方案**：设置 `watch: false`
+
+```javascript
+createFileCookieGetter('./cookie.txt', {
+  watch: false, // 禁用文件监听
+});
+```
+
+**Q2：Cookie 文件修改后没有生效？**
 
 A：检查以下几点：
 
-- 是否启用了 `watch: true` 选项
+- 是否启用了 `watch: true` 选项或设置了 `isDev: true`
 - 控制台是否输出 `[CookieWatcher] Cookie updated from file`
 - 确保 cookie.txt 文件路径正确
 
-**Q2：如何获取浏览器中的 Cookie？**
+**Q3：如何获取浏览器中的 Cookie？**
 
 A：
 
@@ -355,15 +454,76 @@ A：
 2. F12 → Application → Cookies
 3. 复制需要的 Cookie 值到 cookie.txt
 
-**Q3：Cookie 值包含特殊字符导致错误？**
+**Q4：Cookie 值包含特殊字符导致错误？**
 
 A：Cookie 值会被自动处理，支持 `/`、`+`、`=` 等特殊字符。如出现错误，请检查是否有不可见字符。
 
-**Q4：如何调试代理请求？**
+**Q5：如何调试代理请求？**
 
 A：启用 `debug: true` 选项，控制台会输出详细日志。也可在 `hooks.onProxyReq` 中添加自定义日志。
 
-## 十、技术栈
+**Q6：isDev 和 watch 参数有什么区别？**
+
+A：
+
+- `isDev`：最高优先级，直接决定是否启用监听（true=开发模式，false=生产模式）
+- `watch`：中等优先级，控制文件监听行为（true=启用，false=禁用，'auto'=自动检测）
+- 当 `isDev` 设置后，`watch` 参数会被忽略
+
+## 十、问题解决方案
+
+### 10.1 构建进程不退出问题
+
+**问题描述**：运行 `npm run build` 后，构建完成但进程不退出，终端卡住。
+
+**根本原因**：`chokidar` 文件监听器在生产构建时仍在运行（`persistent: true`），导致进程无法退出。
+
+**解决方案**：
+
+```javascript
+// vue.config.js
+const { createFileCookieGetter } = require('dev-proxy-cookie');
+
+const getCookie = createFileCookieGetter('./cookie.txt', {
+  isDev: process.env.NODE_ENV === 'development', // 关键配置
+});
+```
+
+**行为说明**：
+
+| 场景 | isDev 值 | 监听状态 | 进程退出 |
+|------|---------|----------|----------|
+| `npm run serve` | true | ✅ 启用 | - |
+| `npm run build` | false | ❌ 禁用 | ✅ 正常退出 |
+
+### 10.2 ESLint 报错问题
+
+**问题描述**：ESLint 报告 `require('@gylautorun/dev-proxy-cookie')` 有问题。
+
+**解决方案**：
+
+在 `.eslintrc.js` 中配置：
+
+```javascript
+module.exports = {
+  root: true,
+  settings: {
+    'import/resolver': {
+      node: {
+        paths: ['node_modules'],
+        packageDir: __dirname,
+      },
+    },
+  },
+  rules: {
+    'import/no-extraneous-dependencies': ['error', {
+      devDependencies: true,
+    }],
+  },
+};
+```
+
+## 十一、技术栈
 
 | 依赖           | 版本    | 用途                  |
 | -------------- | ------- | --------------------- |
@@ -371,14 +531,11 @@ A：启用 `debug: true` 选项，控制台会输出详细日志。也可在 `ho
 | `http-proxy` | ^1.18.1 | HTTP 代理             |
 | `vite`       | >=4.0.0 | Vite 插件支持（可选） |
 
+## 十二、示例配置
 
+### Vue CLI 完整配置
 
-
-## 十一、例子
-
-* `vue.config.js`配置
-
-```js
+```javascript
 const { createAutoProxyConfig, createFileCookieGetter } = require('@gylautorun/dev-proxy-cookie');
 
 const proxyPath = 'http://10.17.53.3/';
@@ -399,8 +556,8 @@ const proxyConfig = createAutoProxyConfig({
     '/dos-system-manage/',
   ],
   getCookie: createFileCookieGetter(path.resolve(__dirname, './cookie.txt'), {
-    watch: true, // 监听文件变化自动更新
-    debug: true, // 输出调试日志
+    isDev: process.env.NODE_ENV === 'development', // 关键配置
+    debug: true,
   }),
   debug: process.env.NODE_ENV === 'development',
   headers: {
@@ -432,7 +589,7 @@ module.exports = {
 };
 ```
 
-* `cookie.txt`
+### Cookie 文件示例
 
 ```plaintext
 # ============================================================
