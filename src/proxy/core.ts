@@ -60,6 +60,15 @@ export interface AutoProxyCookieOptions {
   cookiePathRewrite?: false | string | { [oldPath: string]: string };
   headers?: { [header: string]: string };
   hooks?: ProxyHooks;
+  /**
+   * 是否为开发环境（优先级最高）
+   * 设置此参数后，将直接决定是否启用文件监听：
+   * - true: 启用监听（开发模式）
+   * - false: 禁用监听（生产模式）
+   * 
+   * 使用示例: isDev: process.env.NODE_ENV === 'development'
+   */
+  isDev?: boolean;
 }
 
 export class AutoProxyCookie {
@@ -368,13 +377,34 @@ export class AutoProxyCookie {
   }
 
   private startFileWatch(): void {
-    this.watcher = watchCookieFile(
-      this.options.cookieFile,
-      this.handleCookieChange,
-      (error) => {
-        this.log('error', '[AutoProxyCookie] File watch error:', error.message);
+    // 判断是否应该启用监听
+    // isDev 参数优先级最高
+    let shouldWatch: boolean;
+    
+    if (this.options.isDev !== undefined) {
+      shouldWatch = this.options.isDev;
+      if (this.options.debug) {
+        console.log(`[AutoProxyCookie] isDev=${this.options.isDev}, ${shouldWatch ? 'enabling' : 'disabling'} watch`);
       }
-    );
+    } else {
+      // 默认启用监听（因为 AutoProxyCookie 主要用于开发环境）
+      shouldWatch = true;
+      if (this.options.debug) {
+        console.log('[AutoProxyCookie] Default behavior: enabling watch (dev mode)');
+      }
+    }
+    
+    if (shouldWatch) {
+      this.watcher = watchCookieFile(
+        this.options.cookieFile,
+        this.handleCookieChange,
+        (error) => {
+          this.log('error', '[AutoProxyCookie] File watch error:', error.message);
+        }
+      );
+    } else if (this.options.debug) {
+      console.log('[AutoProxyCookie] File watch disabled');
+    }
   }
 
   stop(): void {

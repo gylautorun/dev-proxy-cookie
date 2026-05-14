@@ -1,15 +1,32 @@
 import type { Plugin, ViteDevServer } from 'vite';
-import { CookieReader, CookieWatcher, watchCookieFile } from '../utils';
+import { CookieReader, watchCookieFile, shouldEnableWatch } from '../utils';
 
 export interface ViteDevProxyCookieOptions {
   cookieFile: string;
   debug?: boolean;
   onCookieChange?: (cookie: string) => void;
+  /**
+   * 是否监听文件变化
+   * - true: 始终监听
+   * - false: 从不监听
+   * - 'auto': 根据环境自动判断（默认）
+   * @default 'auto'
+   */
+  watch?: boolean | 'auto';
+  /**
+   * 是否为开发环境（优先级最高）
+   * 设置此参数后，将直接决定是否启用文件监听：
+   * - true: 启用监听（开发模式）
+   * - false: 禁用监听（生产模式）
+   * 
+   * 使用示例: isDev: process.env.NODE_ENV === 'development'
+   */
+  isDev?: boolean;
 }
 
 export function viteDevProxyCookie(options: ViteDevProxyCookieOptions): Plugin {
-  const { cookieFile, debug = false, onCookieChange } = options;
-  let watcher: CookieWatcher | null = null;
+  const { cookieFile, debug = false, onCookieChange, watch = 'auto', isDev } = options;
+  let watcher: any = null;
   let currentCookie: string = '';
 
   const cookieReader = new CookieReader({ cookieFile });
@@ -40,17 +57,34 @@ export function viteDevProxyCookie(options: ViteDevProxyCookieOptions): Plugin {
         console.warn('[vite-dev-proxy-cookie] Could not access middleware stack, cookie injection disabled');
       }
 
-      watcher = watchCookieFile(
-        cookieFile,
-        (newCookie) => {
-          currentCookie = newCookie;
-          onCookieChange?.(newCookie);
-          console.log('[vite-dev-proxy-cookie] Cookie changed, please restart server for full effect');
-        },
-        (error) => {
-          console.error('[vite-dev-proxy-cookie] Watch error:', error.message);
+      // 判断是否应该启用监听
+      // isDev 参数优先级最高
+      let shouldWatch: boolean;
+      
+      if (isDev !== undefined) {
+        shouldWatch = isDev;
+        if (debug) {
+          console.log(`[vite-dev-proxy-cookie] isDev=${isDev}, ${shouldWatch ? 'enabling' : 'disabling'} watch`);
         }
-      );
+      } else {
+        shouldWatch = shouldEnableWatch(watch, [], debug, '[vite-dev-proxy-cookie]');
+      }
+      
+      if (shouldWatch) {
+        watcher = watchCookieFile(
+          cookieFile,
+          (newCookie) => {
+            currentCookie = newCookie;
+            onCookieChange?.(newCookie);
+            console.log('[vite-dev-proxy-cookie] Cookie changed, please restart server for full effect');
+          },
+          (error) => {
+            console.error('[vite-dev-proxy-cookie] Watch error:', error.message);
+          }
+        );
+      } else if (debug) {
+        console.log('[vite-dev-proxy-cookie] File watch disabled');
+      }
     },
 
     closeBundle() {

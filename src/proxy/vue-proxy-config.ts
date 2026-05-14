@@ -1,18 +1,37 @@
 import type { IncomingMessage } from 'http';
 import * as path from 'path';
-import { CookieReader, watchCookieFile } from '../utils';
+import { CookieReader, watchCookieFile, shouldEnableWatch } from '../utils';
 import { applyDevCookieHeader } from './apply-dev-cookie-header';
 
 /** Options for {@link createFileCookieGetter}. */
 export interface CreateFileCookieGetterOptions {
   /**
-   * Watch the file for logging when it changes. Cookie value is always read from disk on each proxy request,
-   * so you do not need a dev-server restart when this is false.
-   * @default true
+   * 是否监听文件变化
+   * - true: 始终监听
+   * - false: 从不监听
+   * - 'auto': 根据环境自动判断（默认）
+   * 
+   * Cookie 值每次代理请求时都会从磁盘读取，因此即使 watch 为 false，
+   * 修改 cookie 文件后也不需要重启开发服务器。
+   * @default 'auto'
    */
-  watch?: boolean;
+  watch?: boolean | 'auto';
   /** Log when the cookie file changes (only if `watch` is true). @default false */
   debug?: boolean;
+  /** 
+   * 自定义生产环境变量名称列表，用于判断是否禁用监听
+   * 例如: ['MY_APP_ENV', 'BUILD_TYPE']
+   */
+  productionEnvs?: string[];
+  /**
+   * 是否为开发环境（优先级最高）
+   * 设置此参数后，将直接决定是否启用文件监听：
+   * - true: 启用监听（开发模式）
+   * - false: 禁用监听（生产模式）
+   * 
+   * 使用示例: isDev: process.env.NODE_ENV === 'development'
+   */
+  isDev?: boolean;
 }
 
 export interface VueProxyConfigOptions {
@@ -78,10 +97,30 @@ export function createFileCookieGetter(
   cookieFile: string,
   options: CreateFileCookieGetterOptions = {}
 ): () => string {
-  const { watch = true, debug = false } = options;
+  const { 
+    watch = 'auto', 
+    debug = false,
+    productionEnvs = [],
+    isDev 
+  } = options;
   const reader = new CookieReader({ cookieFile: path.resolve(cookieFile) });
 
-  if (watch) {
+  // 判断是否应该启用监听
+  // isDev 参数优先级最高，直接决定是否启用监听
+  let shouldWatch: boolean;
+  
+  if (isDev !== undefined) {
+    // 用户显式设置了 isDev 参数
+    shouldWatch = isDev;
+    if (debug) {
+      console.log(`[CookieFile] isDev=${isDev}, ${shouldWatch ? 'enabling' : 'disabling'} watch`);
+    }
+  } else {
+    // 使用智能环境检测
+    shouldWatch = shouldEnableWatch(watch, productionEnvs, debug, '[CookieFile]');
+  }
+  
+  if (shouldWatch) {
     watchCookieFile(
       path.resolve(cookieFile),
       (newCookie) => {
@@ -93,6 +132,8 @@ export function createFileCookieGetter(
         console.error('[CookieFile] Watch error:', error.message);
       }
     );
+  } else if (debug) {
+    console.log('[CookieFile] File watch disabled');
   }
 
   return () => reader.readCookie();

@@ -261,6 +261,83 @@ user=admin`;
     expect(getCookie()).toBe('JSESSIONID=abc123; user=admin');
     jest.runAllTimers();
   });
+
+  test('should enable watch when isDev is true', () => {
+    jest.useFakeTimers();
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    
+    const getCookie = createFileCookieGetter(cookieFile, {
+      isDev: true,
+      debug: true,
+    });
+    
+    expect(consoleLogSpy).toHaveBeenCalledWith('[CookieFile] isDev=true, enabling watch');
+    expect(getCookie()).toBe('JSESSIONID=test');
+    
+    consoleLogSpy.mockRestore();
+    jest.runAllTimers();
+  });
+
+  test('should disable watch when isDev is false', () => {
+    jest.useFakeTimers();
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    
+    const getCookie = createFileCookieGetter(cookieFile, {
+      isDev: false,
+      debug: true,
+    });
+    
+    expect(consoleLogSpy).toHaveBeenCalledWith('[CookieFile] isDev=false, disabling watch');
+    expect(getCookie()).toBe('JSESSIONID=test');
+    
+    consoleLogSpy.mockRestore();
+    jest.runAllTimers();
+  });
+
+  test('should respect isDev over watch parameter', () => {
+    jest.useFakeTimers();
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    
+    const getCookie = createFileCookieGetter(cookieFile, {
+      watch: true,  // This should be ignored
+      isDev: false,  // This takes priority
+      debug: true,
+    });
+    
+    expect(consoleLogSpy).toHaveBeenCalledWith('[CookieFile] isDev=false, disabling watch');
+    
+    consoleLogSpy.mockRestore();
+    jest.runAllTimers();
+  });
+
+  test('should use watch parameter when isDev is not set', () => {
+    jest.useFakeTimers();
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    
+    const getCookie = createFileCookieGetter(cookieFile, {
+      watch: false,
+      debug: true,
+    });
+    
+    expect(consoleLogSpy).toHaveBeenCalledWith('[CookieFile] Watch disabled by user setting');
+    
+    consoleLogSpy.mockRestore();
+    jest.runAllTimers();
+  });
+
+  test('should use auto-detection when both isDev and watch are not set', () => {
+    jest.useFakeTimers();
+    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    
+    const getCookie = createFileCookieGetter(cookieFile, {
+      debug: true,
+    });
+    
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Auto-detected'));
+    
+    consoleLogSpy.mockRestore();
+    jest.runAllTimers();
+  });
 });
 
 describe('createVueProxyConfig', () => {

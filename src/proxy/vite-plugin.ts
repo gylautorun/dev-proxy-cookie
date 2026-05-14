@@ -3,6 +3,15 @@ import { AutoProxyCookie, createAutoProxyCookie, type AutoProxyCookieOptions } f
 
 export interface ViteAutoProxyCookiePluginOptions extends AutoProxyCookieOptions {
   name?: string;
+  /**
+   * 是否为开发环境（优先级最高）
+   * 设置此参数后，将直接决定是否启用文件监听：
+   * - true: 启用监听（开发模式）
+   * - false: 禁用监听（生产模式）
+   * 
+   * 使用示例: isDev: process.env.NODE_ENV === 'development'
+   */
+  isDev?: boolean;
 }
 
 function getHttpServer(server: ViteDevServer): any {
@@ -18,6 +27,7 @@ function getHttpServer(server: ViteDevServer): any {
 export function viteAutoProxyCookie(options: ViteAutoProxyCookiePluginOptions): Plugin {
   const {
     name = 'vite-auto-proxy-cookie',
+    isDev,
     ...autoProxyOptions
   } = options;
 
@@ -32,6 +42,7 @@ export function viteAutoProxyCookie(options: ViteAutoProxyCookiePluginOptions): 
         ...autoProxyOptions,
         debug: options.debug ?? false,
         autoRestart: options.autoRestart ?? true,
+        isDev,
       });
 
       try {
