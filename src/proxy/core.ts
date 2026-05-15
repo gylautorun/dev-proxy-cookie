@@ -1,3 +1,11 @@
+/**
+ * 自动代理 Cookie 核心模块
+ * 
+ * 提供完整的开发环境代理解决方案，支持 HTTP 和 WebSocket 代理，
+ * 自动从文件读取 Cookie 并注入到代理请求中。
+ * 
+ * @module core
+ */
 import * as http from 'http';
 import * as net from 'net';
 import * as fs from 'fs';
@@ -8,6 +16,12 @@ import httpProxy from 'http-proxy';
 import { CookieReader, CookieWatcher, watchCookieFile } from '../utils';
 import { applyDevCookieHeader } from './apply-dev-cookie-header';
 
+/**
+ * 错误回调函数类型
+ * @param err - 错误对象
+ * @param req - 请求对象
+ * @param res - 响应对象或 Socket
+ */
 export type ErrorCallback = (err: Error, req: IncomingMessage, res: ServerResponse | net.Socket) => void;
 
 interface ProxyServer {
@@ -71,14 +85,30 @@ export interface AutoProxyCookieOptions {
   isDev?: boolean;
 }
 
+/**
+ * 自动代理 Cookie 类
+ * 
+ * 提供完整的开发环境代理解决方案，支持 HTTP 和 WebSocket 代理，
+ * 自动从文件读取 Cookie 并注入到代理请求中。
+ */
 export class AutoProxyCookie {
+  /** 合并后的配置选项 */
   private options: AutoProxyCookieOptions & { hooks: Required<ProxyHooks> };
+  /** 当前 Cookie 值 */
   private currentCookie: string = '';
+  /** Vite 开发服务器实例 */
   private server: ViteDevServer | null = null;
+  /** HTTP 代理服务器实例 */
   private proxyServer: ProxyServer | null = null;
+  /** Cookie 文件监听器 */
   private watcher: CookieWatcher | null = null;
+  /** Cookie 文件读取器 */
   private cookieReader: CookieReader;
 
+  /**
+   * 构造函数
+   * @param options - 配置选项
+   */
   constructor(options: AutoProxyCookieOptions) {
     const defaultHooks: Required<ProxyHooks> = {
       onProxyReq: () => {},
@@ -116,6 +146,10 @@ export class AutoProxyCookie {
     this.cookieReader = new CookieReader({ cookieFile: options.cookieFile });
   }
 
+  /**
+   * Cookie 变化处理函数
+   * @param newCookie - 新的 Cookie 值
+   */
   private handleCookieChange = (newCookie: string): void => {
     if (newCookie !== this.currentCookie) {
       this.currentCookie = newCookie;
@@ -133,6 +167,11 @@ export class AutoProxyCookie {
     }
   };
 
+  /**
+   * 根据请求路径获取代理目标 URL
+   * @param req - HTTP 请求对象
+   * @returns 代理目标 URL
+   */
   private getProxyUrl(req: IncomingMessage): string {
     const pathname = req.url?.split('?')[0] || '/';
     const proxyMap = this.options.proxyMap || {};
@@ -146,6 +185,11 @@ export class AutoProxyCookie {
     return this.options.target;
   }
 
+  /**
+   * 判断路径是否应该被忽略（不代理）
+   * @param pathname - 请求路径
+   * @returns 是否忽略
+   */
   private isIgnoredPath(pathname: string): boolean {
     const ignorePaths = this.options.ignorePaths || [];
     return ignorePaths.some(ignored =>
@@ -153,6 +197,11 @@ export class AutoProxyCookie {
     );
   }
 
+  /**
+   * 日志输出函数
+   * @param level - 日志级别
+   * @param args - 日志参数
+   */
   private log(level: 'debug' | 'info' | 'warn' | 'error', ...args: any[]): void {
     const levels: Record<string, number> = { debug: 0, info: 1, warn: 2, error: 3 };
     const currentLevel = levels[this.options.logLevel || 'info'];
@@ -169,6 +218,11 @@ export class AutoProxyCookie {
     }
   }
 
+  /**
+   * 创建代理服务器配置选项
+   * @param target - 代理目标地址
+   * @returns 代理服务器配置
+   */
   private createProxyOptions(target: string): ServerOptions {
     const {
       ws,
@@ -199,6 +253,13 @@ export class AutoProxyCookie {
     };
   }
 
+  /**
+   * 代理请求处理函数
+   * @param proxyReq - 代理请求对象
+   * @param req - 原始请求对象
+   * @param res - 响应对象
+   * @param _options - 服务器选项
+   */
   private handleOnProxyReq = (proxyReq: any, req: IncomingMessage, res: ServerResponse, _options: ServerOptions): void => {
     if (this.currentCookie) {
       applyDevCookieHeader(proxyReq, this.currentCookie);
@@ -215,6 +276,12 @@ export class AutoProxyCookie {
     }
   };
 
+  /**
+   * 代理响应处理函数
+   * @param proxyRes - 代理响应对象
+   * @param req - 原始请求对象
+   * @param res - 响应对象
+   */
   private handleOnProxyRes = (proxyRes: any, req: IncomingMessage, res: ServerResponse): void => {
     const allowedHeaders = [
       'Content-Type',
@@ -242,6 +309,12 @@ export class AutoProxyCookie {
     }
   };
 
+  /**
+   * HTTP 代理错误处理函数
+   * @param err - 错误对象
+   * @param req - 请求对象
+   * @param res - 响应对象或 Socket
+   */
   private handleOnError = (err: Error, req: IncomingMessage, res: ServerResponse | net.Socket): void => {
     this.log('error', '[AutoProxyCookie] Proxy Error:', err.message);
     this.log('error', '[AutoProxyCookie] URL:', req.url);
@@ -264,6 +337,12 @@ export class AutoProxyCookie {
     }
   };
 
+  /**
+   * WebSocket 代理错误处理函数
+   * @param err - 错误对象
+   * @param req - 请求对象
+   * @param socket - WebSocket 连接的 Socket
+   */
   private handleOnWsError = (err: Error, req: IncomingMessage, socket: any): void => {
     this.log('error', '[AutoProxyCookie] WebSocket Proxy Error:', err.message);
     this.log('error', '[AutoProxyCookie] WebSocket URL:', req.url);
@@ -281,6 +360,10 @@ export class AutoProxyCookie {
     }
   };
 
+  /**
+   * 初始化代理中间件
+   * @param server - Vite 开发服务器实例
+   */
   async setup(server: ViteDevServer): Promise<void> {
     this.server = server;
     this.currentCookie = this.cookieReader.readCookie();
@@ -376,6 +459,9 @@ export class AutoProxyCookie {
     }
   }
 
+  /**
+   * 启动 Cookie 文件监听
+   */
   private startFileWatch(): void {
     // 判断是否应该启用监听
     // isDev 参数优先级最高
@@ -407,6 +493,9 @@ export class AutoProxyCookie {
     }
   }
 
+  /**
+   * 停止代理服务
+   */
   stop(): void {
     if (this.watcher) {
       this.watcher.stop();
@@ -419,11 +508,20 @@ export class AutoProxyCookie {
     this.log('info', '[AutoProxyCookie] Stopped');
   }
 
+  /**
+   * 获取当前 Cookie 值
+   * @returns 当前 Cookie 字符串
+   */
   getCurrentCookie(): string {
     return this.currentCookie;
   }
 }
 
+/**
+ * 创建 AutoProxyCookie 实例
+ * @param options - 配置选项
+ * @returns AutoProxyCookie 实例
+ */
 export function createAutoProxyCookie(options: AutoProxyCookieOptions): AutoProxyCookie {
   return new AutoProxyCookie(options);
 }

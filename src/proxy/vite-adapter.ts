@@ -1,10 +1,28 @@
+/**
+ * Vite 适配器模块
+ * 
+ * 提供统一的 Vite 插件入口，自动检测 Vite 版本并选择合适的实现。
+ * 支持两种模式：完整代理模式和仅 Cookie 注入模式。
+ * 
+ * @module vite-adapter
+ */
 import type { Plugin } from 'vite';
 import { viteAutoProxyCookie, type ViteAutoProxyCookiePluginOptions } from './vite-plugin';
 import { viteDevProxyCookie, type ViteDevProxyCookieOptions } from './vite-cookie-plugin';
 
+/** Vite 版本号 */
 let viteVersion: string = '';
+/** Vite 主版本号 */
 let majorVersion: number | null = null;
 
+/**
+ * 检测 Vite 版本
+ * 
+ * 从 vite/package.json 中读取版本号，提取主版本号。
+ * 如果读取失败，默认返回 5。
+ * 
+ * @returns Vite 主版本号
+ */
 function detectViteVersion(): number {
   if (majorVersion !== null) {
     return majorVersion;
@@ -21,6 +39,9 @@ function detectViteVersion(): number {
   return majorVersion;
 }
 
+/**
+ * 统一代理 Cookie 配置选项
+ */
 export interface UnifiedProxyCookieOptions {
   cookieFile: string;
   target?: string;
@@ -51,6 +72,16 @@ export interface UnifiedProxyCookieOptions {
   isDev?: boolean;
 }
 
+/**
+ * 创建统一的开发代理 Cookie 插件
+ * 
+ * 根据配置自动选择合适的实现模式：
+ * - 当 mode='cookie' 或 mode='auto' 且未设置 target 时，使用轻量级 Cookie 注入模式
+ * - 其他情况使用完整代理模式
+ * 
+ * @param options - 配置选项
+ * @returns Vite 插件对象
+ */
 export function createDevProxyCookie(options: UnifiedProxyCookieOptions): Plugin {
   const {
     mode = 'auto',

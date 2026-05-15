@@ -1,6 +1,17 @@
+/**
+ * Vite 自动代理插件模块
+ * 
+ * 提供完整的 Vite 代理功能，集成 AutoProxyCookie 核心模块，
+ * 支持 HTTP 和 WebSocket 代理，并自动注入 Cookie。
+ * 
+ * @module vite-plugin
+ */
 import type { Plugin, ViteDevServer } from 'vite';
 import { AutoProxyCookie, createAutoProxyCookie, type AutoProxyCookieOptions } from './core';
 
+/**
+ * Vite 自动代理 Cookie 插件配置选项
+ */
 export interface ViteAutoProxyCookiePluginOptions extends AutoProxyCookieOptions {
   name?: string;
   /**
@@ -14,6 +25,12 @@ export interface ViteAutoProxyCookiePluginOptions extends AutoProxyCookieOptions
   isDev?: boolean;
 }
 
+/**
+ * 获取 Vite 开发服务器的 HTTP Server 实例
+ * 兼容不同版本的 Vite API
+ * @param server - Vite 开发服务器实例
+ * @returns HTTP Server 实例或 null
+ */
 function getHttpServer(server: ViteDevServer): any {
   if ('httpServer' in server && server.httpServer) {
     return server.httpServer;
@@ -24,6 +41,12 @@ function getHttpServer(server: ViteDevServer): any {
   return null;
 }
 
+/**
+ * 创建 Vite 自动代理 Cookie 插件
+ * 
+ * @param options - 插件配置选项
+ * @returns Vite 插件对象
+ */
 export function viteAutoProxyCookie(options: ViteAutoProxyCookiePluginOptions): Plugin {
   const {
     name = 'vite-auto-proxy-cookie',

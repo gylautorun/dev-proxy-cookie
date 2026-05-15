@@ -1,10 +1,17 @@
 /**
- * 环境检测工具函数
- * 用于智能判断当前是否为生产构建环境
+ * 环境检测工具模块
+ * 
+ * 提供智能环境检测功能，用于判断当前是否为生产构建环境，
+ * 从而决定是否启用文件监听等开发环境特性。
+ * 
+ * @module env-detector
  */
 
 /**
  * 判断环境变量值是否表示生产环境
+ * 
+ * @param value - 环境变量值
+ * @returns 是否为生产环境值
  */
 export function isProductionValue(value: string): boolean {
   const productionValues = [

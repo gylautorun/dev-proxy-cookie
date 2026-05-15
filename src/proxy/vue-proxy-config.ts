@@ -1,3 +1,11 @@
+/**
+ * Vue CLI 代理配置模块
+ * 
+ * 提供 Vue CLI 开发服务器的代理配置功能，支持从文件读取 Cookie 并注入代理请求。
+ * 核心函数包括 createFileCookieGetter 和 createVueProxyConfig。
+ * 
+ * @module vue-proxy-config
+ */
 import type { IncomingMessage } from 'http';
 import * as path from 'path';
 import { CookieReader, watchCookieFile, shouldEnableWatch } from '../utils';
@@ -34,27 +42,57 @@ export interface CreateFileCookieGetterOptions {
   isDev?: boolean;
 }
 
+/**
+ * Vue 代理配置选项
+ */
 export interface VueProxyConfigOptions {
+  /** Cookie 获取函数 */
   getCookie?: () => string;
+  /** 是否输出调试日志 */
   debug?: boolean;
+  /** 自定义请求头 */
   headers?: Record<string, string>;
+  /** 是否启用 WebSocket 代理 */
   ws?: boolean;
+  /** 是否修改请求头中的 Origin */
   changeOrigin?: boolean;
+  /** 是否验证 SSL 证书 */
   secure?: boolean;
+  /** 错误回调函数 */
   onError?: (err: Error) => void;
 }
 
+/**
+ * Vue CLI 代理配置接口
+ * 
+ * 符合 Vue CLI 代理配置格式的对象结构
+ */
 export interface ProxyConfig {
+  /** 是否启用 WebSocket 代理 */
   ws: boolean;
+  /** 代理目标地址 */
   target: string;
+  /** 是否修改请求头中的 Origin */
   changeOrigin: boolean;
+  /** 是否验证 SSL 证书 */
   secure: boolean;
+  /** 代理请求前的回调函数 */
   onProxyReq: (proxyReq: any, req: IncomingMessage) => void;
+  /** 代理响应后的回调函数（可选） */
   onProxyRes?: (proxyRes: any, req: IncomingMessage) => void;
+  /** 错误处理回调函数 */
   onError: (err: Error) => void;
+  /** 自定义请求头 */
   headers?: Record<string, string>;
 }
 
+/**
+ * 创建 Vue CLI 代理配置
+ * 
+ * @param target - 代理目标地址
+ * @param options - 配置选项
+ * @returns Vue CLI 代理配置对象
+ */
 export function createVueProxyConfig(
   target: string,
   options: VueProxyConfigOptions = {}
@@ -93,13 +131,22 @@ export function createVueProxyConfig(
   return config;
 }
 
+/**
+ * 创建文件 Cookie 获取器
+ * 
+ * 从指定文件读取 Cookie 值，支持文件监听功能。
+ * 
+ * @param cookieFile - Cookie 文件路径
+ * @param options - 配置选项
+ * @returns Cookie 获取函数
+ */
 export function createFileCookieGetter(
   cookieFile: string,
   options: CreateFileCookieGetterOptions = {}
 ): () => string {
   const { 
     watch = 'auto', 
-    debug = false,
+    debug = true,
     productionEnvs = [],
     isDev 
   } = options;
@@ -139,13 +186,28 @@ export function createFileCookieGetter(
   return () => reader.readCookie();
 }
 
+/**
+ * 自动代理配置选项
+ */
 export interface AutoProxyConfigOptions extends VueProxyConfigOptions {
+  /** 代理目标地址 */
   target: string;
+  /** 忽略的路径列表（不代理这些路径） */
   ignorePaths?: string[];
+  /** 包含的路径列表（只代理这些路径） */
   includePaths?: string[];
+  /** 额外的代理配置 */
   additionalProxies?: Record<string, string>;
 }
 
+/**
+ * 创建自动代理配置
+ * 
+ * 根据配置自动生成 Vue CLI 代理配置对象，支持忽略路径和包含路径两种模式。
+ * 
+ * @param options - 配置选项
+ * @returns Vue CLI 代理配置对象映射
+ */
 export function createAutoProxyConfig(options: AutoProxyConfigOptions): Record<string, ProxyConfig> {
   const { target, ignorePaths = [], includePaths = [], additionalProxies = {}, getCookie, debug, headers } = options;
 
