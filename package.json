@@ -1,6 +1,6 @@
 {
   "name": "@gylautorun/dev-proxy-cookie",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "开发环境代理Cookie注入工具，支持文件监听自动重载和自动代理",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
