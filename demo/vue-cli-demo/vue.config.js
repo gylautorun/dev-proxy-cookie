@@ -13,7 +13,7 @@ const {
   createAutoProxyConfig, 
   createVueProxyConfig, 
   createFileCookieGetter 
-} = require('dev-proxy-cookie');
+} = require('../../dist/index');
 
 // ============================================================
 // 【Cookie 获取器配置】

@@ -62,6 +62,12 @@ export interface AutoProxyCookieOptions {
   autoRestart?: boolean;
   restartMarkerFile?: string;
   proxyMap?: Record<string, string>;
+  /**
+   * 需要代理的路径前缀列表（默认代理到 target）
+   * 例如: ['/api', '/digital-platform']
+   * 如果请求路径匹配这些前缀之一，将被代理到 target
+   */
+  proxyPaths?: string[];
   ignorePaths?: string[];
   ws?: boolean;
   changeOrigin?: boolean;
@@ -75,11 +81,20 @@ export interface AutoProxyCookieOptions {
   headers?: { [header: string]: string };
   hooks?: ProxyHooks;
   /**
+   * 是否启用文件监听
+   * - 'auto': 自动（如果 isDev 为 true，则启用监听）
+   * - true: 强制启用监听
+   * - false: 禁用监听
+   *
+   * 默认值: 'auto'
+   */
+  watch?: 'auto' | boolean;
+  /**
    * 是否为开发环境（优先级最高）
    * 设置此参数后，将直接决定是否启用文件监听：
    * - true: 启用监听（开发模式）
    * - false: 禁用监听（生产模式）
-   * 
+   *
    * 使用示例: isDev: process.env.NODE_ENV === 'development'
    */
   isDev?: boolean;
@@ -130,6 +145,7 @@ export class AutoProxyCookie {
       autoRestart: false,
       restartMarkerFile: '.cookie-restart-marker',
       proxyMap: {},
+      proxyPaths: [],
       ignorePaths: [],
       ws: true,
       changeOrigin: true,
@@ -143,7 +159,7 @@ export class AutoProxyCookie {
       headers: {},
       ...mergedOptions,
     };
-    this.cookieReader = new CookieReader({ cookieFile: options.cookieFile });
+    this.cookieReader = new CookieReader({ cookieFile: options.cookieFile }, options.debug ?? false);
   }
 
   /**
@@ -173,15 +189,36 @@ export class AutoProxyCookie {
    * @returns 代理目标 URL
    */
   private getProxyUrl(req: IncomingMessage): string {
-    const pathname = req.url?.split('?')[0] || '/';
+    const fullUrl = req.url || '/';
+    const pathname = new URL(fullUrl, 'http://localhost').pathname;
     const proxyMap = this.options.proxyMap || {};
+    const proxyPaths = this.options.proxyPaths || [];
 
+    this.log('debug', '[AutoProxyCookie] getProxyUrl - Request path:', pathname);
+    this.log('debug', '[AutoProxyCookie] getProxyUrl - Available proxyMap paths:', Object.keys(proxyMap));
+    this.log('debug', '[AutoProxyCookie] getProxyUrl - Available proxyPaths:', proxyPaths);
+
+    // 首先检查 proxyMap（自定义代理目标）
     for (const [prefix, target] of Object.entries(proxyMap)) {
-      if (pathname.startsWith(prefix)) {
+      const matches = pathname.startsWith(prefix);
+      this.log('debug', '[AutoProxyCookie] getProxyUrl - Checking proxyMap:', prefix, '- matches:', matches);
+      if (matches) {
+        this.log('debug', '[AutoProxyCookie] getProxyUrl - Matched proxyMap:', prefix, '->', target);
         return target;
       }
     }
 
+    // 然后检查 proxyPaths（默认代理到 target）
+    for (const prefix of proxyPaths) {
+      const matches = pathname.startsWith(prefix);
+      this.log('debug', '[AutoProxyCookie] getProxyUrl - Checking proxyPaths:', prefix, '- matches:', matches);
+      if (matches) {
+        this.log('debug', '[AutoProxyCookie] getProxyUrl - Matched proxyPaths:', prefix, '->', this.options.target);
+        return this.options.target;
+      }
+    }
+
+    this.log('debug', '[AutoProxyCookie] getProxyUrl - No match found, using default target:', this.options.target);
     return this.options.target;
   }
 
@@ -204,7 +241,9 @@ export class AutoProxyCookie {
    */
   private log(level: 'debug' | 'info' | 'warn' | 'error', ...args: any[]): void {
     const levels: Record<string, number> = { debug: 0, info: 1, warn: 2, error: 3 };
-    const currentLevel = levels[this.options.logLevel || 'info'];
+    // 如果设置了 debug: true，则使用 debug 级别
+    const effectiveLogLevel = this.options.debug ? 'debug' : (this.options.logLevel || 'info');
+    const currentLevel = levels[effectiveLogLevel];
     const msgLevel = levels[level];
 
     if (msgLevel >= currentLevel) {
@@ -261,8 +300,16 @@ export class AutoProxyCookie {
    * @param _options - 服务器选项
    */
   private handleOnProxyReq = (proxyReq: any, req: IncomingMessage, res: ServerResponse, _options: ServerOptions): void => {
+    console.log('[AutoProxyCookie] === handleOnProxyReq START ===');
+    console.log('[AutoProxyCookie] Request URL:', req.method, req.url);
+    console.log('[AutoProxyCookie] Current cookie:', this.currentCookie ? `(length: ${this.currentCookie.length})` : '(empty)');
+
     if (this.currentCookie) {
+      console.log('[AutoProxyCookie] Applying cookie header...');
       applyDevCookieHeader(proxyReq, this.currentCookie);
+      console.log('[AutoProxyCookie] Cookie header applied successfully');
+    } else {
+      console.log('[AutoProxyCookie] No cookie to apply - currentCookie is empty!');
     }
 
     this.log('debug', '[AutoProxyCookie] Proxy Request:', req.method, req.url);
@@ -274,6 +321,8 @@ export class AutoProxyCookie {
         this.log('error', '[AutoProxyCookie] onProxyReq hook error:', (err as Error).message);
       }
     }
+    
+    console.log('[AutoProxyCookie] === handleOnProxyReq END ===');
   };
 
   /**
@@ -396,30 +445,52 @@ export class AutoProxyCookie {
     }
 
     server.middlewares.use((req: any, res: any, next: any) => {
-      const pathname = new URL(req.url || '/', 'http://localhost').pathname;
+      const fullUrl = req.url || '/';
+      const pathname = new URL(fullUrl, 'http://localhost').pathname;
+      
+      // 始终输出请求信息（不仅仅是 debug 模式）
+      console.log('[AutoProxyCookie] === Incoming Request ===');
+      console.log('[AutoProxyCookie] Method:', req.method);
+      console.log('[AutoProxyCookie] Full URL:', fullUrl);
+      console.log('[AutoProxyCookie] Pathname:', pathname);
+      console.log('[AutoProxyCookie] Headers:', JSON.stringify(req.headers, null, 2));
 
       if (this.isIgnoredPath(pathname)) {
+        console.log('[AutoProxyCookie] Path ignored, passing to next middleware');
         next();
         return;
       }
 
+      // 读取 cookie 并更新 currentCookie
       this.currentCookie = this.cookieReader.readCookie();
+      console.log('[AutoProxyCookie] Current cookie:', this.currentCookie ? `(length: ${this.currentCookie.length})` : '(empty)');
+      if (this.currentCookie) {
+        console.log('[AutoProxyCookie] Cookie preview:', this.currentCookie);
+      }
+
+      // 检查是否匹配代理路径（包括 proxyMap 和 proxyPaths）
+      const proxyMapKeys = Object.keys(this.options.proxyMap || {});
+      const proxyPaths = this.options.proxyPaths || [];
+      const allProxyPrefixes = [...proxyMapKeys, ...proxyPaths];
+      const matched = allProxyPrefixes.some(prefix => pathname.startsWith(prefix));
+      console.log('[AutoProxyCookie] Path matches proxy rules:', matched);
 
       if (this.proxyServer) {
         const target = this.getProxyUrl(req);
-        if (this.options.debug || this.options.logLevel === 'debug') {
-          this.log('info', `[AutoProxyCookie] ${pathname} -> ${target}`);
-        }
+        console.log(`[AutoProxyCookie] Proxying ${req.method} ${pathname} -> ${target}`);
 
         const proxyOptions = this.createProxyOptions(target);
 
         try {
+          console.log('[AutoProxyCookie] Calling proxyServer.web...');
           this.proxyServer.web(req, res, proxyOptions);
+          console.log('[AutoProxyCookie] proxyServer.web called successfully');
         } catch (err: any) {
-          this.log('error', '[AutoProxyCookie] Proxy web error:', err.message);
+          console.error('[AutoProxyCookie] Proxy web error:', err.message);
           next(err);
         }
       } else {
+        console.log('[AutoProxyCookie] No proxy server, passing to next middleware');
         next();
       }
     });

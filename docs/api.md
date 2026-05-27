@@ -5,7 +5,7 @@
 ### Vite 插件
 
 ```javascript
-import { viteAutoProxyCookie } from 'dev-proxy-cookie'
+import { viteMiddlewareProxy } from 'dev-proxy-cookie'
 ```
 
 ### Vue CLI 工具
@@ -16,50 +16,48 @@ const { createVueProxyConfig, createFileCookieGetter, FileCookieReader } = requi
 
 ---
 
-## viteAutoProxyCookie
+## viteMiddlewareProxy
 
-Vite 插件，用于自动代理和 Cookie 注入。
+Vite 中间件代理插件，用于自动代理和 Cookie 注入。**兼容所有 Vite 版本**。
 
 ### 类型定义
 
 ```typescript
-interface AutoProxyCookieOptions {
+interface ViteMiddlewareProxyOptions {
   cookieFile: string;
   target: string;
   debug?: boolean;
-  autoRestart?: boolean;
   proxyMap?: Record<string, string>;
+  proxyPaths?: string[];
   ignorePaths?: string[];
-  restartMarkerFile?: string;
 }
 
-function viteAutoProxyCookie(options: AutoProxyCookieOptions): Plugin;
+function viteMiddlewareProxy(options: ViteMiddlewareProxyOptions): Plugin;
 ```
 
 ### 参数说明
 
-| 参数                  | 类型     | 必填 | 说明                                              |
-| --------------------- | -------- | ---- | ------------------------------------------------- |
-| `cookieFile`        | string   | 是   | Cookie 文件路径                                   |
-| `target`            | string   | 是   | 默认代理目标地址                                  |
-| `debug`             | boolean  | 否   | 是否启用调试模式，默认 `false`                  |
-| `autoRestart`       | boolean  | 否   | Cookie 变化时是否自动重启，默认 `false`         |
-| `proxyMap`          | object   | 否   | 自定义代理映射表                                  |
-| `ignorePaths`       | string[] | 否   | 需要忽略的路径列表                                |
-| `restartMarkerFile` | string   | 否   | 重启标记文件路径，默认 `.cookie-restart-marker` |
+| 参数          | 类型     | 必填 | 说明                              |
+| ------------- | -------- | ---- | --------------------------------- |
+| `cookieFile`  | string   | 是   | Cookie 文件路径                   |
+| `target`      | string   | 是   | 默认代理目标地址                  |
+| `debug`       | boolean  | 否   | 是否启用调试模式，默认 `false`   |
+| `proxyMap`    | object   | 否   | 自定义代理映射表                  |
+| `proxyPaths`  | string[] | 否   | 需要代理的路径前缀列表            |
+| `ignorePaths` | string[] | 否   | 需要忽略的路径列表（不代理）      |
 
 ### 使用示例
 
 ```javascript
-import { viteAutoProxyCookie } from 'dev-proxy-cookie'
+import { viteMiddlewareProxy } from 'dev-proxy-cookie'
 
-viteAutoProxyCookie({
+viteMiddlewareProxy({
   cookieFile: './cookie.txt',
   target: 'http://localhost:8080',
   debug: true,
-  autoRestart: true,
   proxyMap: { '/mock/': 'http://localhost:3000' },
-  ignorePaths: ['/assets/'],
+  proxyPaths: ['/api', '/cas'],
+  ignorePaths: ['/assets/', '/public/'],
 })
 ```
 
@@ -226,72 +224,42 @@ Cookie 文件读取器类。
 
 ```typescript
 class FileCookieReader {
-  constructor(filePath: string);
+  constructor(options: { cookieFile: string }, debug?: boolean);
   readCookie(): string;
-  watch(callback: () => void): void;
-  unwatch(): void;
 }
 ```
 
 ### 方法说明
 
-| 方法                | 说明                         |
-| ------------------- | ---------------------------- |
-| `readCookie()`    | 读取并返回 Cookie 字符串     |
-| `watch(callback)` | 监听文件变化，变化时调用回调 |
-| `unwatch()`       | 停止监听                     |
+| 方法             | 说明                     |
+| ---------------- | ------------------------ |
+| `readCookie()` | 读取并返回 Cookie 字符串 |
 
 ### 使用示例
 
 ```javascript
 const { FileCookieReader } = require('dev-proxy-cookie')
 
-const reader = new FileCookieReader('./cookie.txt')
+const reader = new FileCookieReader({ cookieFile: './cookie.txt' }, true)
 
 // 读取 Cookie
 console.log(reader.readCookie())
-
-// 监听文件变化
-reader.watch(() => {
-  console.log('Cookie 文件已更新')
-})
-
-// 停止监听
-reader.unwatch()
-```
-
----
-
-## 内部类
-
-### AutoProxyCookie
-
-自动代理 Cookie 管理类（Vite 插件内部使用）。
-
-```typescript
-class AutoProxyCookie {
-  constructor(options: AutoProxyCookieOptions);
-  setup(server: ViteDevServer): void;
-  start(): void;
-  stop(): void;
-}
 ```
 
 ---
 
 ## 类型定义汇总
 
-### AutoProxyCookieOptions
+### ViteMiddlewareProxyOptions
 
 ```typescript
-interface AutoProxyCookieOptions {
+interface ViteMiddlewareProxyOptions {
   cookieFile: string;
   target: string;
   debug?: boolean;
-  autoRestart?: boolean;
   proxyMap?: Record<string, string>;
+  proxyPaths?: string[];
   ignorePaths?: string[];
-  restartMarkerFile?: string;
 }
 ```
 
@@ -318,10 +286,10 @@ interface FileCookieGetterOptions {
 
 ## 导出清单
 
-| 导出名称                   | 类型     | 说明                   |
-| -------------------------- | -------- | ---------------------- |
-| `viteAutoProxyCookie`    | function | Vite 插件              |
-| `createVueProxyConfig`   | function | 创建 Vue CLI 代理配置  |
-| `createFileCookieGetter` | function | 创建 Cookie 获取器     |
-| `FileCookieReader`       | class    | Cookie 文件读取器      |
-| `AutoProxyCookie`        | class    | 自动代理 Cookie 管理类 |
+| 导出名称                   | 类型     | 说明                     |
+| -------------------------- | -------- | ------------------------ |
+| `viteMiddlewareProxy`     | function | Vite 中间件代理插件      |
+| `createVueProxyConfig`    | function | 创建 Vue CLI 代理配置    |
+| `createFileCookieGetter`  | function | 创建 Cookie 获取器       |
+| `FileCookieReader`        | class    | Cookie 文件读取器        |
+| `createAutoProxyConfig`   | function | 创建自动代理配置         |

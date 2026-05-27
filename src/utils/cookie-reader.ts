@@ -24,16 +24,20 @@ export interface CookieReaderOptions {
 export class CookieReader {
   /** 配置选项 */
   protected options: CookieReaderOptions;
+  /** 是否启用调试模式 */
+  protected debug: boolean;
 
   /**
    * 构造函数
    * @param options - 配置选项
+   * @param debug - 是否启用调试模式
    */
-  constructor(options: CookieReaderOptions) {
+  constructor(options: CookieReaderOptions, debug: boolean = false) {
     this.options = {
       encoding: 'utf-8',
       ...options,
     };
+    this.debug = debug;
   }
 
   /**
@@ -46,17 +50,43 @@ export class CookieReader {
   readCookie(): string {
     try {
       const filePath = path.resolve(this.options.cookieFile);
+      
+      if (this.debug) {
+        console.log('[CookieReader] Resolved cookie file path:', filePath);
+        console.log('[CookieReader] File exists:', fs.existsSync(filePath));
+      }
+      
       if (fs.existsSync(filePath)) {
         const content = fs.readFileSync(filePath, this.options.encoding || 'utf-8');
+        
+        if (this.debug) {
+          console.log('[CookieReader] File content length:', content.length);
+        }
+        
         // 过滤注释行（以 # 开头）和空行，然后合并成一行
         const lines = content.split('\n');
         const cookieLines = lines
           .map(line => line.trim())
           .filter(line => line && !line.startsWith('#'));
-        return cookieLines.join('; ');
+        
+        const result = cookieLines.join('; ');
+        
+        if (this.debug) {
+          console.log('[CookieReader] Parsed cookie:', result ? '(has cookie)' : '(empty)');
+        }
+        
+        return result;
       }
+      
+      if (this.debug) {
+        console.log('[CookieReader] Cookie file not found:', filePath);
+      }
+      
       return '';
-    } catch {
+    } catch (err) {
+      if (this.debug) {
+        console.error('[CookieReader] Error reading cookie file:', (err as Error).message);
+      }
       return '';
     }
   }

@@ -2,21 +2,20 @@
 
 ## 基本配置
 
-在 `vite.config.js` 中使用 `viteAutoProxyCookie` 插件：
+在 `vite.config.js` 中使用 `viteMiddlewareProxy` 插件：
 
 ```javascript
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { viteAutoProxyCookie } from 'dev-proxy-cookie'
+import { viteMiddlewareProxy } from 'dev-proxy-cookie'
 
 export default defineConfig({
   plugins: [
     vue(),
-    viteAutoProxyCookie({
+    viteMiddlewareProxy({
       cookieFile: './cookie.txt',
       target: 'http://10.17.53.3:10000',
       debug: true,
-      autoRestart: true,
     }),
   ],
 })
@@ -26,11 +25,11 @@ export default defineConfig({
 
 ```javascript
 import { defineConfig } from 'vite'
-import { viteAutoProxyCookie } from 'dev-proxy-cookie'
+import { viteMiddlewareProxy } from 'dev-proxy-cookie'
 
 export default defineConfig({
   plugins: [
-    viteAutoProxyCookie({
+    viteMiddlewareProxy({
       // 必需：Cookie 文件路径
       cookieFile: './cookie.txt',
     
@@ -40,20 +39,17 @@ export default defineConfig({
       // 可选：调试模式，输出详细日志
       debug: true,
     
-      // 可选：Cookie 变化时自动重启开发服务器
-      autoRestart: true,
-    
       // 可选：自定义代理映射（优先级高于默认代理）
       proxyMap: {
         '/mock/': 'http://localhost:3000',
-        '/api/': 'http://192.168.1.100:8080',
+        '/api/v2/': 'http://192.168.1.100:8080',
       },
+    
+      // 可选：需要代理的路径前缀列表（使用默认 target）
+      proxyPaths: ['/api', '/cas', '/examine'],
     
       // 可选：忽略的路径（不进行代理）
       ignorePaths: ['/assets/', '/img/', '/public/'],
-    
-      // 可选：重启标记文件路径
-      restartMarkerFile: '.cookie-restart-marker',
     }),
   ],
 })
@@ -61,15 +57,14 @@ export default defineConfig({
 
 ## 配置选项说明
 
-| 选项                  | 类型     | 默认值                   | 说明                      |
-| --------------------- | -------- | ------------------------ | ------------------------- |
-| `cookieFile`        | string   | -                        | Cookie 文件路径（必需）   |
-| `target`            | string   | -                        | 默认代理目标地址（必需）  |
-| `debug`             | boolean  | false                    | 是否启用调试模式          |
-| `autoRestart`       | boolean  | false                    | Cookie 变化时是否自动重启 |
-| `proxyMap`          | object   | {}                       | 自定义代理映射表          |
-| `ignorePaths`       | string[] | []                       | 需要忽略的路径列表        |
-| `restartMarkerFile` | string   | '.cookie-restart-marker' | 重启标记文件路径          |
+| 选项          | 类型     | 默认值 | 说明                      |
+| ------------- | -------- | ------ | ------------------------- |
+| `cookieFile`  | string   | -      | Cookie 文件路径（必需）   |
+| `target`      | string   | -      | 默认代理目标地址（必需）  |
+| `debug`       | boolean  | false  | 是否启用调试模式          |
+| `proxyMap`    | object   | {}     | 自定义代理映射表          |
+| `proxyPaths`  | string[] | []     | 需要代理的路径前缀列表    |
+| `ignorePaths` | string[] | []     | 需要忽略的路径列表        |
 
 ## Cookie 文件格式
 
@@ -106,7 +101,7 @@ const target = process.env.VUE_APP_TARGET || 'http://localhost:8080'
 
 export default defineConfig({
   plugins: [
-    viteAutoProxyCookie({
+    viteMiddlewareProxy({
       cookieFile: './cookie.txt',
       target,
     }),
@@ -117,7 +112,7 @@ export default defineConfig({
 ### 场景三：自定义代理规则
 
 ```javascript
-viteAutoProxyCookie({
+viteMiddlewareProxy({
   cookieFile: './cookie.txt',
   target: 'http://main-server:8080',
   
@@ -126,6 +121,9 @@ viteAutoProxyCookie({
     '/mock/': 'http://mock-server:3000',
     '/static/': 'http://cdn-server:80',
   },
+  
+  // 指定需要代理的路径
+  proxyPaths: ['/api', '/cas'],
   
   // 静态资源不代理
   ignorePaths: ['/assets/', '/favicon.ico'],
@@ -143,19 +141,22 @@ pnpm run dev
 启动后，插件会：
 
 1. 读取 `cookie.txt` 文件中的 Cookie
-2. 监听文件变化，自动更新 Cookie
-3. 如果启用了 `autoRestart`，Cookie 变化时会自动重启服务器
+2. 所有匹配的请求都会自动携带这些 Cookie
 
 ## 常见问题
 
 ### Q: Cookie 文件修改后没有生效？
 
-A: 确保已启用 `autoRestart: true`，或者手动重启开发服务器。
+A: 手动重启开发服务器即可，当前版本不支持自动热更新。
 
 ### Q: 某些请求没有携带 Cookie？
 
-A: 检查是否在 `ignorePaths` 中配置了该路径，或者检查 Cookie 文件格式是否正确。
+A: 检查是否在 `proxyPaths` 中配置了该路径，或者检查 Cookie 文件格式是否正确。
 
 ### Q: 代理目标地址需要认证？
 
 A: 确保 Cookie 文件中的 Cookie 是有效的登录凭证。
+
+### Q: 兼容哪些 Vite 版本？
+
+A: 本插件不依赖具体的 Vite 类型定义，兼容所有 Vite 版本。

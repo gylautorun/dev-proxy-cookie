@@ -150,7 +150,7 @@ export function createFileCookieGetter(
     productionEnvs = [],
     isDev 
   } = options;
-  const reader = new CookieReader({ cookieFile: path.resolve(cookieFile) });
+  const reader = new CookieReader({ cookieFile: path.resolve(cookieFile) }, debug);
 
   // 判断是否应该启用监听
   // isDev 参数优先级最高，直接决定是否启用监听

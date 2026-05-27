@@ -10,11 +10,34 @@
  * @param cookie - 要设置的 Cookie 字符串
  */
 export function applyDevCookieHeader(
-  proxyReq: { removeHeader(name: string): void; setHeader(name: string, value: string): void },
+  proxyReq: { removeHeader(name: string): void; setHeader(name: string, value: string): void; getHeader?(name: string): string | undefined },
   cookie: string
 ): void {
-  if (!cookie) return;
-  proxyReq.removeHeader('cookie');
+  console.log('[applyDevCookieHeader] === START ===');
+  console.log('[applyDevCookieHeader] Cookie to apply:', cookie ? `(length: ${cookie.length})` : '(empty)');
+  
+  if (!cookie) {
+    console.log('[applyDevCookieHeader] Cookie is empty, returning');
+    console.log('[applyDevCookieHeader] === END ===');
+    return;
+  }
+  
+  // 尝试获取当前的 cookie 头（如果有）
+  const existingCookie = proxyReq.getHeader?.('Cookie');
+  console.log('[applyDevCookieHeader] Cookie current:', existingCookie ? `(length: ${String(existingCookie).length})` : '(none)');
+  
+  // 如果现有 Cookie 与要设置的 Cookie 相同，直接跳过处理
+  if (existingCookie === cookie) {
+    console.log('[applyDevCookieHeader] Cookie is already set, skipping');
+    console.log('[applyDevCookieHeader] === END ===');
+    return;
+  }
+  
   proxyReq.removeHeader('Cookie');
   proxyReq.setHeader('Cookie', cookie);
+  
+  // 验证是否设置成功
+  const newCookie = proxyReq.getHeader?.('Cookie');
+  console.log('[applyDevCookieHeader] Cookie new:', newCookie ? `(length: ${String(newCookie).length})` : '(failed)');
+  console.log('[applyDevCookieHeader] === END ===');
 }
