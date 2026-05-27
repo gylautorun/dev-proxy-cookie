@@ -1,14 +1,14 @@
 # dev-proxy-cookie
 
-一个用于开发环境的代理 Cookie 注入工具，支持自动代理所有请求、Cookie 文件监听和自动重载。
+一个用于开发环境的代理 Cookie 注入工具，支持自动代理所有请求和 Cookie 注入。
 
 ## 功能特性
 
 - ✅ **Cookie 自动注入**：将 Cookie 文件中的 Cookie 自动注入到所有代理请求中
-- ✅ **Cookie 热更新**：监听 Cookie 文件变化，自动刷新请求中的 Cookie
 - ✅ **自动代理**：支持自动代理所有请求，无需手动配置多个代理规则
 - ✅ **双框架支持**：同时支持 Vite 和 Vue CLI (vue.config.js)
 - ✅ **灵活配置**：支持自定义代理映射、忽略路径等
+- ✅ **版本兼容**：Vite 插件兼容所有 Vite 版本（2.x/3.x/4.x/5.x）
 
 ## 快速开始
 
@@ -25,6 +25,7 @@ pnpm add dev-proxy-cookie -D
 在项目根目录创建 `cookie.txt` 文件：
 
 ```
+# 开发环境 Cookie 配置
 JSESSIONID=abc123def456;
 user=admin;
 token=xyz789;
@@ -42,6 +43,9 @@ token=xyz789;
 ```
 dev-proxy-cookie/
 ├── src/              # 源代码
+│   ├── proxy/        # 代理模块
+│   ├── utils/        # 工具模块
+│   └── index.ts      # 入口文件
 ├── __tests__/        # 单元测试
 ├── demo/             # 示例项目
 ├── docs/             # 文档
@@ -51,6 +55,10 @@ dev-proxy-cookie/
 ## API 文档
 
 查看 [API 文档](api.md) 获取完整的配置选项说明。
+
+## 版本变更
+
+查看 [CHANGELOG](CHANGELOG.md) 获取版本更新记录。
 
 ## 发布流程
 

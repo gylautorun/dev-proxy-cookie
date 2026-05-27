@@ -11,7 +11,6 @@
 ```
 # Cookie 文件
 cookie.txt
-.cookie-restart-marker
 ```
 
 ### 2. 仅用于开发环境
@@ -27,6 +26,7 @@ Cookie 有过期时间，过期后需要重新获取：
 1. 在浏览器中重新登录目标系统
 2. 复制新的 Cookie
 3. 更新 `cookie.txt` 文件
+4. 重启开发服务器
 
 ---
 
@@ -41,8 +41,8 @@ Cookie 有过期时间，过期后需要重新获取：
 JSESSIONID=abc123;
 user=admin;
 
-# 错误格式（不要这样写）
-Cookie: JSESSIONID=abc123; user=admin
+# 也支持单行格式
+JSESSIONID=abc123; user=admin; token=xyz789
 ```
 
 ### 2. 路径匹配优先级
@@ -50,26 +50,12 @@ Cookie: JSESSIONID=abc123; user=admin
 代理路径匹配按照以下优先级：
 
 1. **自定义 proxyMap**（最高优先级）
-2. **默认代理**（匹配所有未忽略的路径）
+2. **proxyPaths**（匹配指定路径前缀）
 3. **ignorePaths**（不进行代理）
 
-### 3. Vite 自动重启机制
+### 3. Cookie 修改后重启
 
-当 `autoRestart: true` 时：
-
-- Cookie 文件变化时会创建一个标记文件
-- Vite 监听器检测到标记文件变化后自动重启
-- 重启后会读取新的 Cookie
-
-### 4. Vue CLI 文件监听
-
-Vue CLI 模式下需要手动启用监听：
-
-```javascript
-const getCookie = createFileCookieGetter('./cookie.txt', {
-  watch: true,  // 必须启用此选项
-})
-```
+修改 `cookie.txt` 文件后，需要手动重启开发服务器才能生效。
 
 ---
 
@@ -83,11 +69,7 @@ const getCookie = createFileCookieGetter('./cookie.txt', {
 ignorePaths: ['/assets/', '/img/', '/public/', '/favicon.ico']
 ```
 
-### 2. 避免频繁修改 Cookie
-
-频繁修改 Cookie 文件会触发自动重启（如果启用），影响开发效率。
-
-### 3. 使用环境变量
+### 2. 使用环境变量
 
 将目标地址配置为环境变量，便于不同环境切换：
 
@@ -104,15 +86,13 @@ VUE_APP_TARGET=http://10.17.53.3:10000
 
 **可能原因**：
 
-1. 未启用文件监听（Vite 需要 `autoRestart: true`，Vue CLI 需要 `watch: true`）
-2. Cookie 文件格式错误
-3. 开发服务器缓存了旧的 Cookie
+1. Cookie 文件格式错误
+2. 开发服务器缓存了旧的 Cookie
 
 **解决方案**：
 
-1. 检查配置是否正确启用了监听
-2. 检查 Cookie 文件格式
-3. 手动重启开发服务器
+1. 检查 Cookie 文件格式
+2. 手动重启开发服务器
 
 ### Q: 某些请求没有携带 Cookie？
 
@@ -120,7 +100,7 @@ VUE_APP_TARGET=http://10.17.53.3:10000
 
 1. 请求路径在 `ignorePaths` 中
 2. 请求没有经过代理
-3. Cookie 获取函数返回空字符串
+3. Cookie 文件不存在或为空
 
 **解决方案**：
 
@@ -142,20 +122,6 @@ VUE_APP_TARGET=http://10.17.53.3:10000
 2. 检查目标地址配置
 3. 检查网络连接
 
-### Q: Vite 自动重启不生效？
-
-**可能原因**：
-
-1. 没有安装 `chokidar` 依赖
-2. 标记文件路径配置错误
-3. Vite 配置问题
-
-**解决方案**：
-
-1. 确保安装了 `chokidar`
-2. 检查 `restartMarkerFile` 配置
-3. 检查 Vite 配置
-
 ### Q: 与其他 Vite 插件冲突？
 
 **可能原因**：
@@ -165,7 +131,7 @@ VUE_APP_TARGET=http://10.17.53.3:10000
 
 **解决方案**：
 
-1. 调整插件顺序，将 `viteAutoProxyCookie` 放在最后
+1. 调整插件顺序，将 `viteMiddlewareProxy` 放在最后
 2. 检查其他插件的配置
 
 ---
@@ -186,7 +152,7 @@ VUE_APP_COOKIE_FILE=./cookie.txt
 // config/proxy.js
 const { createVueProxyConfig, createFileCookieGetter } = require('dev-proxy-cookie')
 
-const getCookie = createFileCookieGetter(process.env.VUE_APP_COOKIE_FILE, { watch: true })
+const getCookie = createFileCookieGetter(process.env.VUE_APP_COOKIE_FILE)
 
 module.exports = function createProxy(target) {
   return createVueProxyConfig(target, { getCookie, debug: true })
@@ -212,7 +178,10 @@ const { target } = configs[env]
 启用 `debug: true` 可以查看详细日志：
 
 ```javascript
-viteAutoProxyCookie({
+// Vite 项目
+import { viteMiddlewareProxy } from 'dev-proxy-cookie'
+
+viteMiddlewareProxy({
   cookieFile: './cookie.txt',
   target: 'http://localhost:8080',
   debug: true,  // 启用调试日志
@@ -246,7 +215,7 @@ module.exports = {
 ```javascript
 const { createVueProxyConfig, createFileCookieGetter } = require('dev-proxy-cookie')
 
-const getCookie = createFileCookieGetter('./cookie.txt', { watch: true })
+const getCookie = createFileCookieGetter('./cookie.txt')
 
 module.exports = {
   devServer: {
@@ -259,20 +228,19 @@ module.exports = {
 }
 ```
 
-### Vite 用户迁移
-
-如果你从 Vue CLI 迁移到 Vite：
+### Vite 用户配置
 
 ```javascript
 // vite.config.js
-import { viteAutoProxyCookie } from 'dev-proxy-cookie'
+import { defineConfig } from 'vite'
+import { viteMiddlewareProxy } from 'dev-proxy-cookie'
 
 export default defineConfig({
   plugins: [
-    viteAutoProxyCookie({
+    viteMiddlewareProxy({
       cookieFile: './cookie.txt',
       target: 'http://localhost:8080',
-      autoRestart: true,
+      debug: true,
     }),
   ],
 })

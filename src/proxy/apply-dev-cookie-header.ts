@@ -33,6 +33,7 @@ export function applyDevCookieHeader(
     return;
   }
   
+  proxyReq.removeHeader('cookie');
   proxyReq.removeHeader('Cookie');
   proxyReq.setHeader('Cookie', cookie);
   
