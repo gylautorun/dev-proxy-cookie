@@ -181,6 +181,35 @@ bump_version() {
   success "版本已升级为: $new_version"
 }
 
+# 检查标签是否存在
+check_tag_exists() {
+  local version=$1
+  if git tag -l "v$version" | grep -q "v$version"; then
+    return 0  # 标签存在
+  else
+    return 1  # 标签不存在
+  fi
+}
+
+# 删除已存在的标签
+delete_existing_tag() {
+  local version=$1
+  
+  info "标签 v$version 已存在，删除旧标签..."
+  
+  # 删除本地标签
+  if git tag -l "v$version" | grep -q "v$version"; then
+    git tag -d "v$version"
+    info "已删除本地标签: v$version"
+  fi
+  
+  # 删除远程标签
+  if git ls-remote --tags origin "v$version" | grep -q "v$version"; then
+    git push origin ":refs/tags/v$version"
+    info "已删除远程标签: v$version"
+  fi
+}
+
 # 发布到 npm
 publish_to_npm() {
   local new_version=$(get_current_version)
@@ -203,9 +232,27 @@ publish_to_npm() {
   # 执行发布，使用 --ignore-scripts 跳过 prepublishOnly 钩子（脚本已执行过检查）
   npm publish --tag "$tag" --ignore-scripts
   
+  # 检查并处理已存在的标签
+  if check_tag_exists "$new_version"; then
+    warning "标签 v$new_version 已存在"
+    read -p "是否删除旧标签并重新创建? (y/N) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      delete_existing_tag "$new_version"
+    else
+      warning "跳过标签创建"
+      success "发布成功！版本: v$new_version (tag: $tag)，但未创建 git 标签"
+      return
+    fi
+  fi
+  
   # 创建 git tag
   git tag "v$new_version"
+  info "创建 git 标签: v$new_version"
+  
+  # 推送标签到远程
   git push origin "v$new_version"
+  info "推送标签到远程"
   
   success "发布成功！版本: v$new_version (tag: $tag)"
 }
