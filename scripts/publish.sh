@@ -2,7 +2,7 @@
 
 # ==============================================================================
 # dev-proxy-cookie npm 自动化发布脚本
-# 自动化发布流程：检查 → 构建 → 测试 → 版本升级 → 发布
+# 自动化发布流程：检查 → 测试 → 版本升级 → 构建 → 发布
 # ==============================================================================
 
 set -e
@@ -162,9 +162,9 @@ bump_version() {
   echo
 
   case $REPLY in
-    1) npm version patch ;;
-    2) npm version minor ;;
-    3) npm version major ;;
+    1) npm version patch --no-git-tag-version ;;
+    2) npm version minor --no-git-tag-version ;;
+    3) npm version major --no-git-tag-version ;;
     4) npm run bump:beta ;;
     5) npm run bump:alpha ;;
     6) 
@@ -230,7 +230,10 @@ publish_to_npm() {
   fi
   
   # 执行发布，使用 --ignore-scripts 跳过 prepublishOnly 钩子（脚本已执行过检查）
-  npm publish --tag "$tag" --ignore-scripts
+  if ! npm publish --tag "$tag" --ignore-scripts; then
+    error "npm 发布失败"
+    exit 1
+  fi
   
   # 检查并处理已存在的标签
   if check_tag_exists "$new_version"; then
@@ -348,8 +351,8 @@ main() {
   echo "=========================================="
   local final_version=$(get_current_version)
   echo "发布版本: v$final_version"
-  echo "npm 包地址: https://www.npmjs.com/package/dev-proxy-cookie"
-  echo "安装命令: npm install dev-proxy-cookie@${final_version}"
+  echo "npm 包地址: https://www.npmjs.com/package/@gylautorun/dev-proxy-cookie"
+  echo "安装命令: npm install @gylautorun/dev-proxy-cookie@${final_version}"
   echo
 }
 
