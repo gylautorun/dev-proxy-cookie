@@ -20,6 +20,14 @@ export interface ViteMiddlewareProxyOptions {
   /** 是否启用调试日志 */
   debug?: boolean;
   /** 
+   * 是否使用 Cookie 文件中的 Cookie 注入到请求中
+   * - true: 使用文件中的 Cookie（默认）
+   * - false: 不注入 Cookie，使用浏览器发送的 Cookie
+   * 
+   * 当使用账号密码登录时，设置为 false，避免覆盖浏览器的登录 Cookie
+   */
+  useCookie?: boolean;
+  /** 
    * 代理路径映射表
    * 键：路径前缀，值：代理目标地址
    */
@@ -71,6 +79,7 @@ export function viteMiddlewareProxy(options: ViteMiddlewareProxyOptions): any {
     cookieFile,
     target,
     debug = false,
+    useCookie = true,
     proxyMap = {},
     proxyPaths = [],
     ignorePaths = [],
@@ -78,7 +87,12 @@ export function viteMiddlewareProxy(options: ViteMiddlewareProxyOptions): any {
 
   // 创建 Cookie 读取器
   const cookieReader = new CookieReader({ cookieFile }, debug);
-  let currentCookie = cookieReader.readCookie();
+  let currentCookie = '';
+
+  // 如果启用 Cookie，读取初始 Cookie
+  if (useCookie) {
+    currentCookie = cookieReader.readCookie();
+  }
 
   // 合并所有代理路径前缀
   const allProxyPrefixes = [
@@ -96,7 +110,7 @@ export function viteMiddlewareProxy(options: ViteMiddlewareProxyOptions): any {
       const proxyServer = httpProxy.createProxyServer({});
 
       // 监听 Cookie 文件变化
-      if (debug) {
+      if (useCookie && debug) {
         console.log('[ViteMiddlewareProxy] Watching cookie file:', cookieFile);
       }
 
@@ -126,16 +140,21 @@ export function viteMiddlewareProxy(options: ViteMiddlewareProxyOptions): any {
           console.log('[ViteMiddlewareProxy] Proxying:', req.method, pathname, '->', proxyTarget);
         }
 
-        // 读取最新的 Cookie
-        currentCookie = cookieReader.readCookie();
+        // 如果启用 Cookie，读取最新的 Cookie 并注入
+        if (useCookie) {
+          currentCookie = cookieReader.readCookie();
 
-        // 注入 Cookie
-        if (currentCookie) {
-          if (debug) {
-            console.log('[ViteMiddlewareProxy] Injecting cookie:', `(length: ${currentCookie.length})`);
+          if (currentCookie) {
+            if (debug) {
+              console.log('[ViteMiddlewareProxy] Injecting cookie:', `(length: ${currentCookie.length})`);
+            }
+            (req as any).headers['cookie'] = currentCookie;
+            (req as any).headers['Cookie'] = currentCookie;
+          } else if (debug) {
+            console.log('[ViteMiddlewareProxy] Cookie file is empty');
           }
-          (req as any).headers['cookie'] = currentCookie;
-          (req as any).headers['Cookie'] = currentCookie;
+        } else if (debug) {
+          console.log('[ViteMiddlewareProxy] useCookie is false, skipping cookie injection');
         }
 
         // 代理请求

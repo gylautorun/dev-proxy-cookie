@@ -18,6 +18,7 @@
 | **Vue CLI 兼容**    | 提供 `createVueProxyConfig`，完美兼容 vue.config.js 代理配置         | Vue CLI 项目               |
 | **Vite 插件支持**   | 开箱即用的 Vite 中间件插件，自动配置代理和 Cookie 注入，兼容所有 Vite 版本 | Vite 项目                  |
 | **Cookie 文件读取** | 支持注释过滤的 Cookie 文件读取器                                      | 开发过程中 Cookie 管理     |
+| **Cookie 控制**      | 支持 `useCookie` 参数，可禁用 Cookie 注入                              | 账号密码登录场景           |
 | **自动代理**        | 可选自动代理所有请求，无需手动配置每个路径                             | 需要代理大量接口的场景     |
 | **双向模式**        | 支持白名单模式（`includePaths`）和黑名单模式（`ignorePaths`）      | 灵活控制代理范围           |
 | **钩子函数**        | 支持 `onProxyReq`、`onProxyRes`、`onError`、`onWsError` 等钩子 | 自定义代理行为             |
@@ -253,9 +254,17 @@ dos-session-id=YWQxMWUwMTktZjI4Yi00NzNm
 | `cookieFile`  | string   | -      | Cookie 文件路径（必需）           |
 | `target`      | string   | -      | 默认代理目标地址（必需）          |
 | `debug`       | boolean  | false  | 是否启用调试模式                  |
+| `useCookie`   | boolean  | true   | 是否使用 Cookie 文件中的 Cookie 注入 |
 | `proxyMap`    | object   | {}     | 自定义代理映射表（路径→目标地址） |
 | `proxyPaths`  | string[] | []     | 需要代理的路径前缀列表            |
 | `ignorePaths` | string[] | []     | 需要忽略的路径列表（不代理）      |
+
+### 7.5 useCookie 参数说明
+
+| 值 | 效果 | 适用场景 |
+|----|------|----------|
+| `true`（默认） | 使用 Cookie 文件中的 Cookie 注入到请求中 | 使用 Cookie 文件登录 |
+| `false` | 不注入 Cookie，使用浏览器发送的 Cookie | 使用账号密码登录，避免覆盖浏览器登录状态 |
 
 ## 八、最佳实践
 
@@ -372,6 +381,55 @@ export default defineConfig({
   ],
 });
 ```
+
+### 使用账号密码登录（禁用 Cookie 注入）
+
+当需要使用账号密码登录时，设置 `useCookie: false`，避免覆盖浏览器的登录 Cookie：
+
+**Vite 项目：**
+
+```javascript
+import { viteMiddlewareProxy } from '@gylautorun/dev-proxy-cookie';
+
+export default defineConfig({
+  plugins: [
+    viteMiddlewareProxy({
+      cookieFile: './cookie.txt',
+      target: 'http://10.17.53.3',
+      useCookie: false,  // 禁用 Cookie 注入，使用浏览器发送的 Cookie
+      debug: true,
+      proxyPaths: ['/api'],
+    }),
+  ],
+});
+```
+
+**Vue CLI 项目：**
+
+```javascript
+const { createAutoProxyConfig, createFileCookieGetter } = require('@gylautorun/dev-proxy-cookie');
+
+const getCookie = createFileCookieGetter('./cookie.txt');
+
+module.exports = {
+  devServer: {
+    proxy: createAutoProxyConfig({
+      target: 'http://10.17.53.3:10000',
+      getCookie,
+      useCookie: false,  // 禁用 Cookie 注入
+      debug: true,
+      ignorePaths: ['/assets/', '/img/', '/public/'],
+    }),
+  },
+};
+```
+
+**使用说明：**
+
+1. 设置 `useCookie: false` 后，代理不会从 Cookie 文件读取和注入 Cookie
+2. 请求会使用浏览器发送的原始 Cookie
+3. 适合需要在浏览器中手动登录的场景
+4. 登录成功后，浏览器的登录状态会被保持和使用
 
 ### Cookie 文件示例
 

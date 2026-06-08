@@ -130,6 +130,27 @@ viteMiddlewareProxy({
 })
 ```
 
+### 场景四：使用账号密码登录（禁用 Cookie 注入）
+
+当需要使用账号密码登录时，设置 `useCookie: false`，避免覆盖浏览器的登录 Cookie：
+
+```javascript
+viteMiddlewareProxy({
+  cookieFile: './cookie.txt',
+  target: 'http://10.17.53.3:10000',
+  useCookie: false,  // 禁用 Cookie 注入
+  debug: true,
+  proxyPaths: ['/api'],
+})
+```
+
+**使用说明：**
+
+1. 设置 `useCookie: false` 后，代理不会从 Cookie 文件读取和注入 Cookie
+2. 请求会使用浏览器发送的原始 Cookie
+3. 适合需要在浏览器中手动登录的场景
+4. 登录成功后，浏览器的登录状态会被保持和使用
+
 ## 启动开发服务器
 
 ```bash

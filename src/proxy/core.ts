@@ -98,6 +98,14 @@ export interface AutoProxyCookieOptions {
    * 使用示例: isDev: process.env.NODE_ENV === 'development'
    */
   isDev?: boolean;
+  /**
+   * 是否使用 Cookie 文件中的 Cookie 注入到请求中
+   * - true: 使用文件中的 Cookie（默认）
+   * - false: 不注入 Cookie，使用浏览器发送的 Cookie
+   * 
+   * 当使用账号密码登录时，设置为 false，避免覆盖浏览器的登录 Cookie
+   */
+  useCookie?: boolean;
 }
 
 /**
@@ -157,6 +165,7 @@ export class AutoProxyCookie {
       cookieDomainRewrite: '*',
       cookiePathRewrite: false,
       headers: {},
+      useCookie: true,
       ...mergedOptions,
     };
     this.cookieReader = new CookieReader({ cookieFile: options.cookieFile }, options.debug ?? false);
@@ -302,12 +311,15 @@ export class AutoProxyCookie {
   private handleOnProxyReq = (proxyReq: any, req: IncomingMessage, res: ServerResponse, _options: ServerOptions): void => {
     console.log('[AutoProxyCookie] === handleOnProxyReq START ===');
     console.log('[AutoProxyCookie] Request URL:', req.method, req.url);
+    console.log('[AutoProxyCookie] useCookie:', this.options.useCookie);
     console.log('[AutoProxyCookie] Current cookie:', this.currentCookie ? `(length: ${this.currentCookie.length})` : '(empty)');
 
-    if (this.currentCookie) {
+    if (this.options.useCookie && this.currentCookie) {
       console.log('[AutoProxyCookie] Applying cookie header...');
       applyDevCookieHeader(proxyReq, this.currentCookie);
       console.log('[AutoProxyCookie] Cookie header applied successfully');
+    } else if (!this.options.useCookie) {
+      console.log('[AutoProxyCookie] useCookie is false, skipping cookie injection');
     } else {
       console.log('[AutoProxyCookie] No cookie to apply - currentCookie is empty!');
     }
@@ -453,6 +465,7 @@ export class AutoProxyCookie {
       console.log('[AutoProxyCookie] Method:', req.method);
       console.log('[AutoProxyCookie] Full URL:', fullUrl);
       console.log('[AutoProxyCookie] Pathname:', pathname);
+      console.log('[AutoProxyCookie] useCookie:', this.options.useCookie);
       console.log('[AutoProxyCookie] Headers:', JSON.stringify(req.headers, null, 2));
 
       if (this.isIgnoredPath(pathname)) {
@@ -461,11 +474,15 @@ export class AutoProxyCookie {
         return;
       }
 
-      // 读取 cookie 并更新 currentCookie
-      this.currentCookie = this.cookieReader.readCookie();
-      console.log('[AutoProxyCookie] Current cookie:', this.currentCookie ? `(length: ${this.currentCookie.length})` : '(empty)');
-      if (this.currentCookie) {
-        console.log('[AutoProxyCookie] Cookie preview:', this.currentCookie);
+      // 如果启用 Cookie，读取 cookie 并更新 currentCookie
+      if (this.options.useCookie) {
+        this.currentCookie = this.cookieReader.readCookie();
+        console.log('[AutoProxyCookie] Current cookie:', this.currentCookie ? `(length: ${this.currentCookie.length})` : '(empty)');
+        if (this.currentCookie) {
+          console.log('[AutoProxyCookie] Cookie preview:', this.currentCookie);
+        }
+      } else {
+        console.log('[AutoProxyCookie] useCookie is false, skipping cookie reading');
       }
 
       // 检查是否匹配代理路径（包括 proxyMap 和 proxyPaths）

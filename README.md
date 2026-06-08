@@ -166,6 +166,27 @@ export default defineConfig({
 });
 ```
 
+### 使用账号密码登录（禁用 Cookie 注入）
+
+当需要使用账号密码登录时，设置 `useCookie: false`，避免覆盖浏览器的登录 Cookie：
+
+```javascript
+import { defineConfig } from 'vite';
+import { viteMiddlewareProxy } from 'dev-proxy-cookie';
+
+export default defineConfig({
+  plugins: [
+    viteMiddlewareProxy({
+      cookieFile: './cookie.txt',
+      target: 'http://10.17.33.33',
+      useCookie: false,  // 禁用 Cookie 注入，使用浏览器发送的 Cookie
+      debug: true,
+      proxyPaths: ['/api'],
+    }),
+  ],
+});
+```
+
 ## API 文档
 
 ### Vue CLI 相关

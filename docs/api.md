@@ -27,6 +27,7 @@ interface ViteMiddlewareProxyOptions {
   cookieFile: string;
   target: string;
   debug?: boolean;
+  useCookie?: boolean;
   proxyMap?: Record<string, string>;
   proxyPaths?: string[];
   ignorePaths?: string[];
@@ -37,14 +38,22 @@ function viteMiddlewareProxy(options: ViteMiddlewareProxyOptions): Plugin;
 
 ### 参数说明
 
-| 参数          | 类型     | 必填 | 说明                              |
-| ------------- | -------- | ---- | --------------------------------- |
-| `cookieFile`  | string   | 是   | Cookie 文件路径                   |
-| `target`      | string   | 是   | 默认代理目标地址                  |
-| `debug`       | boolean  | 否   | 是否启用调试模式，默认 `false`   |
-| `proxyMap`    | object   | 否   | 自定义代理映射表                  |
-| `proxyPaths`  | string[] | 否   | 需要代理的路径前缀列表            |
-| `ignorePaths` | string[] | 否   | 需要忽略的路径列表（不代理）      |
+| 参数          | 类型     | 必填 | 说明                                                      |
+| ------------- | -------- | ---- | --------------------------------------------------------- |
+| `cookieFile`  | string   | 是   | Cookie 文件路径                                           |
+| `target`      | string   | 是   | 默认代理目标地址                                          |
+| `debug`       | boolean  | 否   | 是否启用调试模式，默认 `false`                           |
+| `useCookie`   | boolean  | 否   | 是否使用 Cookie 文件中的 Cookie 注入，默认 `true`       |
+| `proxyMap`    | object   | 否   | 自定义代理映射表                                          |
+| `proxyPaths`  | string[] | 否   | 需要代理的路径前缀列表                                    |
+| `ignorePaths` | string[] | 否   | 需要忽略的路径列表（不代理）                              |
+
+### useCookie 参数说明
+
+| 值 | 效果 | 适用场景 |
+|----|------|----------|
+| `true`（默认） | 使用 Cookie 文件中的 Cookie 注入到请求中 | 使用 Cookie 文件登录 |
+| `false` | 不注入 Cookie，使用浏览器发送的 Cookie | 使用账号密码登录，避免覆盖浏览器登录状态 |
 
 ### 使用示例
 
@@ -73,6 +82,7 @@ viteMiddlewareProxy({
 interface VueProxyConfigOptions {
   getCookie?: () => string;
   debug?: boolean;
+  useCookie?: boolean;
   headers?: Record<string, string>;
 }
 
@@ -84,12 +94,13 @@ function createVueProxyConfig(
 
 ### 参数说明
 
-| 参数          | 类型     | 必填 | 说明                             |
-| ------------- | -------- | ---- | -------------------------------- |
-| `target`    | string   | 是   | 代理目标地址                     |
-| `getCookie` | function | 否   | Cookie 获取函数                  |
-| `debug`     | boolean  | 否   | 是否启用调试模式，默认 `false` |
-| `headers`   | object   | 否   | 自定义请求头                     |
+| 参数          | 类型     | 必填 | 说明                                                     |
+| ------------- | -------- | ---- | -------------------------------------------------------- |
+| `target`    | string   | 是   | 代理目标地址                                             |
+| `getCookie` | function | 否   | Cookie 获取函数                                          |
+| `debug`     | boolean  | 否   | 是否启用调试模式，默认 `false`                          |
+| `useCookie` | boolean  | 否   | 是否使用 Cookie 文件中的 Cookie 注入，默认 `true`       |
+| `headers`   | object   | 否   | 自定义请求头                                             |
 
 ### 返回值
 
@@ -129,15 +140,16 @@ function createAutoProxyConfig(
 
 ### 参数说明
 
-| 参数                  | 类型     | 必填 | 说明                             |
-| --------------------- | -------- | ---- | -------------------------------- |
-| `target`            | string   | 是   | 默认代理目标地址                 |
-| `getCookie`         | function | 否   | Cookie 获取函数                  |
-| `debug`             | boolean  | 否   | 是否启用调试模式，默认 `false` |
-| `headers`           | object   | 否   | 自定义请求头                     |
-| `includePaths`      | string[] | 否   | 只代理这些路径（白名单模式）     |
-| `ignorePaths`       | string[] | 否   | 忽略这些路径（黑名单模式）       |
-| `additionalProxies` | object   | 否   | 额外的代理配置                   |
+| 参数                  | 类型     | 必填 | 说明                                                      |
+| --------------------- | -------- | ---- | -------------------------------------------------------- |
+| `target`            | string   | 是   | 默认代理目标地址                                          |
+| `getCookie`         | function | 否   | Cookie 获取函数                                           |
+| `debug`             | boolean  | 否   | 是否启用调试模式，默认 `false`                          |
+| `useCookie`         | boolean  | 否   | 是否使用 Cookie 文件中的 Cookie 注入，默认 `true`        |
+| `headers`           | object   | 否   | 自定义请求头                                              |
+| `includePaths`      | string[] | 否   | 只代理这些路径（白名单模式）                              |
+| `ignorePaths`       | string[] | 否   | 忽略这些路径（黑名单模式）                                |
+| `additionalProxies` | object   | 否   | 额外的代理配置                                            |
 
 ### 返回值
 
@@ -257,6 +269,7 @@ interface ViteMiddlewareProxyOptions {
   cookieFile: string;
   target: string;
   debug?: boolean;
+  useCookie?: boolean;
   proxyMap?: Record<string, string>;
   proxyPaths?: string[];
   ignorePaths?: string[];
@@ -269,6 +282,7 @@ interface ViteMiddlewareProxyOptions {
 interface VueProxyConfigOptions {
   getCookie?: () => string;
   debug?: boolean;
+  useCookie?: boolean;
   headers?: Record<string, string>;
 }
 ```

@@ -255,4 +255,89 @@ describe('createAutoProxyConfig', () => {
     expect(consoleSpy).toHaveBeenCalledWith('\n[Proxy Error]', 'Test error');
     consoleSpy.mockRestore();
   });
+
+  test('should inject cookie when useCookie is true (default)', () => {
+    const mockGetCookie = jest.fn().mockReturnValue('test-cookie');
+    const config = createAutoProxyConfig({
+      target: 'http://localhost:8080',
+      getCookie: mockGetCookie,
+      useCookie: true,
+    });
+
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
+    const mockReq = { url: '/api/users', method: 'GET' } as any;
+
+    config['/'].onProxyReq(mockProxyReq, mockReq);
+
+    expect(mockGetCookie).toHaveBeenCalled();
+    expect(mockProxyReq.setHeader).toHaveBeenCalledWith('Cookie', 'test-cookie');
+  });
+
+  test('should not inject cookie when useCookie is false', () => {
+    const mockGetCookie = jest.fn().mockReturnValue('test-cookie');
+    const config = createAutoProxyConfig({
+      target: 'http://localhost:8080',
+      getCookie: mockGetCookie,
+      useCookie: false,
+    });
+
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
+    const mockReq = { url: '/api/users', method: 'GET' } as any;
+
+    config['/'].onProxyReq(mockProxyReq, mockReq);
+
+    expect(mockProxyReq.setHeader).not.toHaveBeenCalled();
+  });
+
+  test('should default useCookie to true when not specified', () => {
+    const mockGetCookie = jest.fn().mockReturnValue('test-cookie');
+    const config = createAutoProxyConfig({
+      target: 'http://localhost:8080',
+      getCookie: mockGetCookie,
+    });
+
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
+    const mockReq = { url: '/api/users', method: 'GET' } as any;
+
+    config['/'].onProxyReq(mockProxyReq, mockReq);
+
+    expect(mockGetCookie).toHaveBeenCalled();
+    expect(mockProxyReq.setHeader).toHaveBeenCalledWith('Cookie', 'test-cookie');
+  });
+
+  test('should respect useCookie: false for includePaths', () => {
+    const mockGetCookie = jest.fn().mockReturnValue('test-cookie');
+    const config = createAutoProxyConfig({
+      target: 'http://localhost:8080',
+      getCookie: mockGetCookie,
+      useCookie: false,
+      includePaths: ['/api/'],
+    });
+
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
+    const mockReq = { url: '/api/users', method: 'GET' } as any;
+
+    config['/api/'].onProxyReq(mockProxyReq, mockReq);
+
+    expect(mockProxyReq.setHeader).not.toHaveBeenCalled();
+  });
+
+  test('should respect useCookie: false for additionalProxies', () => {
+    const mockGetCookie = jest.fn().mockReturnValue('test-cookie');
+    const config = createAutoProxyConfig({
+      target: 'http://localhost:8080',
+      getCookie: mockGetCookie,
+      useCookie: false,
+      additionalProxies: {
+        '/api/': 'http://api-server:8081',
+      },
+    });
+
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
+    const mockReq = { url: '/api/users', method: 'GET' } as any;
+
+    config['/api/'].onProxyReq(mockProxyReq, mockReq);
+
+    expect(mockProxyReq.setHeader).not.toHaveBeenCalled();
+  });
 });

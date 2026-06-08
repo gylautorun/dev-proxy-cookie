@@ -77,7 +77,7 @@ module.exports = {
           origin: 'http://10.17.53.3:10000',
         },
       }),
-    
+  
       // 代理到其他服务器
       '/mock/': createProxyConfig('http://59.202.52.183:3000'),
     },
@@ -105,15 +105,24 @@ const getCookie = createFileCookieGetter('./cookie.txt', {
 createVueProxyConfig(target, {
   getCookie: () => 'JSESSIONID=abc123',  // Cookie 获取函数
   debug: false,                          // 是否输出调试日志
+  useCookie: true,                       // 是否使用 Cookie
   headers: {},                           // 自定义请求头
 })
 ```
 
-| 选项          | 类型     | 默认值 | 说明                    |
-| ------------- | -------- | ------ | ----------------------- |
-| `getCookie` | function | -      | Cookie 获取函数（必需） |
-| `debug`     | boolean  | false  | 是否输出调试日志        |
-| `headers`   | object   | {}     | 自定义请求头            |
+| 选项          | 类型     | 默认值 | 说明                                         |
+| ------------- | -------- | ------ | -------------------------------------------- |
+| `getCookie` | function | -      | Cookie 获取函数（必需）                      |
+| `debug`     | boolean  | false  | 是否输出调试日志                             |
+| `useCookie` | boolean  | true   | 是否使用 Cookie 文件中的 Cookie 注入到请求中 |
+| `headers`   | object   | {}     | 自定义请求头                                 |
+
+### useCookie 参数说明
+
+| 值               | 效果                                     | 适用场景                                 |
+| ---------------- | ---------------------------------------- | ---------------------------------------- |
+| `true`（默认） | 使用 Cookie 文件中的 Cookie 注入到请求中 | 使用 Cookie 文件登录                     |
+| `false`        | 不注入 Cookie，使用浏览器发送的 Cookie   | 使用账号密码登录，避免覆盖浏览器登录状态 |
 
 ## createAutoProxyConfig 配置（自动代理所有接口）
 
@@ -256,6 +265,35 @@ module.exports = {
   },
 }
 ```
+
+### 场景四：使用账号密码登录（禁用 Cookie 注入）
+
+当需要使用账号密码登录时，设置 `useCookie: false`，避免覆盖浏览器的登录 Cookie：
+
+```javascript
+const { createAutoProxyConfig, createFileCookieGetter } = require('dev-proxy-cookie')
+
+const getCookie = createFileCookieGetter('./cookie.txt')
+
+module.exports = {
+  devServer: {
+    proxy: createAutoProxyConfig({
+      target: 'http://10.17.53.3:10000',
+      getCookie,
+      useCookie: false,  // 禁用 Cookie 注入
+      debug: true,
+      ignorePaths: ['/assets/', '/img/', '/public/'],
+    }),
+  },
+}
+```
+
+**使用说明：**
+
+1. 设置 `useCookie: false` 后，代理不会从 Cookie 文件读取和注入 Cookie
+2. 请求会使用浏览器发送的原始 Cookie
+3. 适合需要在浏览器中手动登录的场景
+4. 登录成功后，浏览器的登录状态会被保持和使用
 
 ## 启动开发服务器
 

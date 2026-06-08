@@ -50,6 +50,14 @@ export interface VueProxyConfigOptions {
   getCookie?: () => string;
   /** 是否输出调试日志 */
   debug?: boolean;
+  /** 
+   * 是否使用 Cookie 文件中的 Cookie 注入到请求中
+   * - true: 使用文件中的 Cookie（默认）
+   * - false: 不注入 Cookie，使用浏览器发送的 Cookie
+   * 
+   * 当使用账号密码登录时，设置为 false，避免覆盖浏览器的登录 Cookie
+   */
+  useCookie?: boolean;
   /** 自定义请求头 */
   headers?: Record<string, string>;
   /** 是否启用 WebSocket 代理 */
@@ -100,6 +108,7 @@ export function createVueProxyConfig(
   const {
     getCookie,
     debug = false,
+    useCookie = true,
     headers = {},
     ws = false,
     changeOrigin = true,
@@ -114,13 +123,18 @@ export function createVueProxyConfig(
     secure,
     headers,
     onProxyReq: (proxyReq: any, req: IncomingMessage) => {
-      const cookie = getCookie ? getCookie() : '';
-      if (cookie) {
-        applyDevCookieHeader(proxyReq, cookie);
-      }
-      if (debug) {
-        const reqPath = req.url || '/';
-        console.log('[Proxy Request]', reqPath, req.method, cookie ? '(with cookie)' : '(no cookie)');
+      const reqPath = req.url || '/';
+      
+      if (useCookie) {
+        const cookie = getCookie ? getCookie() : '';
+        if (cookie) {
+          applyDevCookieHeader(proxyReq, cookie);
+        }
+        if (debug) {
+          console.log('[Proxy Request]', reqPath, req.method, cookie ? '(with cookie)' : '(no cookie)');
+        }
+      } else if (debug) {
+        console.log('[Proxy Request]', reqPath, req.method, '(useCookie is false, skipping cookie injection)');
       }
     },
     onError: customOnError || ((err: Error) => {
@@ -209,13 +223,13 @@ export interface AutoProxyConfigOptions extends VueProxyConfigOptions {
  * @returns Vue CLI 代理配置对象映射
  */
 export function createAutoProxyConfig(options: AutoProxyConfigOptions): Record<string, ProxyConfig> {
-  const { target, ignorePaths = [], includePaths = [], additionalProxies = {}, getCookie, debug, headers } = options;
+  const { target, ignorePaths = [], includePaths = [], additionalProxies = {}, getCookie, debug, headers, useCookie = true } = options;
 
   const result: Record<string, ProxyConfig> = {};
 
   if (includePaths.length > 0) {
     for (const proxyPath of includePaths) {
-      result[proxyPath] = createVueProxyConfig(target, { getCookie, debug, headers });
+      result[proxyPath] = createVueProxyConfig(target, { getCookie, debug, headers, useCookie });
     }
   } else {
     const defaultProxy: ProxyConfig = {
@@ -231,12 +245,16 @@ export function createAutoProxyConfig(options: AutoProxyConfigOptions): Record<s
           return;
         }
 
-        const cookie = getCookie ? getCookie() : '';
-        if (cookie) {
-          applyDevCookieHeader(proxyReq, cookie);
-        }
-        if (debug) {
-          console.log('[Proxy Request]', reqPath, req.method, cookie ? '(with cookie)' : '(no cookie)');
+        if (useCookie) {
+          const cookie = getCookie ? getCookie() : '';
+          if (cookie) {
+            applyDevCookieHeader(proxyReq, cookie);
+          }
+          if (debug) {
+            console.log('[Proxy Request]', reqPath, req.method, cookie ? '(with cookie)' : '(no cookie)');
+          }
+        } else if (debug) {
+          console.log('[Proxy Request]', reqPath, req.method, '(useCookie is false, skipping cookie injection)');
         }
       },
       onError: (err: Error) => {
@@ -247,7 +265,7 @@ export function createAutoProxyConfig(options: AutoProxyConfigOptions): Record<s
   }
 
   for (const [proxyPath, proxyTarget] of Object.entries(additionalProxies)) {
-    result[proxyPath] = createVueProxyConfig(proxyTarget, { getCookie, debug, headers });
+    result[proxyPath] = createVueProxyConfig(proxyTarget, { getCookie, debug, headers, useCookie });
   }
 
   return result;

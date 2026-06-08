@@ -439,6 +439,42 @@ describe('createVueProxyConfig', () => {
 
     expect(mockProxyReq.setHeader).not.toHaveBeenCalled();
   });
+
+  test('should inject cookie when useCookie is true (default)', () => {
+    const mockGetCookie = jest.fn().mockReturnValue('test-cookie');
+    const config = createVueProxyConfig('http://localhost:8080', { getCookie: mockGetCookie, useCookie: true });
+
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
+    const mockReq = { url: '/api/test', method: 'GET' };
+
+    config.onProxyReq(mockProxyReq, mockReq as any);
+
+    expect(mockProxyReq.setHeader).toHaveBeenCalledWith('Cookie', 'test-cookie');
+  });
+
+  test('should not inject cookie when useCookie is false', () => {
+    const mockGetCookie = jest.fn().mockReturnValue('test-cookie');
+    const config = createVueProxyConfig('http://localhost:8080', { getCookie: mockGetCookie, useCookie: false });
+
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
+    const mockReq = { url: '/api/test', method: 'GET' };
+
+    config.onProxyReq(mockProxyReq, mockReq as any);
+
+    expect(mockProxyReq.setHeader).not.toHaveBeenCalled();
+  });
+
+  test('should default useCookie to true when not specified', () => {
+    const mockGetCookie = jest.fn().mockReturnValue('test-cookie');
+    const config = createVueProxyConfig('http://localhost:8080', { getCookie: mockGetCookie });
+
+    const mockProxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
+    const mockReq = { url: '/api/test', method: 'GET' };
+
+    config.onProxyReq(mockProxyReq, mockReq as any);
+
+    expect(mockProxyReq.setHeader).toHaveBeenCalledWith('Cookie', 'test-cookie');
+  });
 });
 
 describe('CookieReader edge cases', () => {

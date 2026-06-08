@@ -64,4 +64,35 @@ describe('viteMiddlewareProxy', () => {
       expect(plugin).toBeDefined();
     });
   });
+
+  describe('useCookie configuration', () => {
+    it('should accept useCookie: true (default)', () => {
+      const plugin = viteMiddlewareProxy({
+        cookieFile: './cookie.txt',
+        target: 'http://localhost:3000/',
+        useCookie: true,
+      });
+
+      expect(plugin).toBeDefined();
+    });
+
+    it('should accept useCookie: false to disable cookie injection', () => {
+      const plugin = viteMiddlewareProxy({
+        cookieFile: './cookie.txt',
+        target: 'http://localhost:3000/',
+        useCookie: false,
+      });
+
+      expect(plugin).toBeDefined();
+    });
+
+    it('should default useCookie to true when not specified', () => {
+      const plugin = viteMiddlewareProxy({
+        cookieFile: './cookie.txt',
+        target: 'http://localhost:3000/',
+      });
+
+      expect(plugin).toBeDefined();
+    });
+  });
 });

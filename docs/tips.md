@@ -188,6 +188,31 @@ viteMiddlewareProxy({
 })
 ```
 
+### 5. 使用账号密码登录
+
+当需要使用账号密码登录而不是 Cookie 文件时，设置 `useCookie: false`：
+
+```javascript
+// Vite 项目
+import { viteMiddlewareProxy } from 'dev-proxy-cookie'
+
+viteMiddlewareProxy({
+  cookieFile: './cookie.txt',  // Cookie 文件仍然需要指定（用于其他配置）
+  target: 'http://localhost:8080',
+  useCookie: false,  // 禁用 Cookie 注入，使用浏览器发送的 Cookie
+  debug: true,
+})
+
+// Vue CLI 项目
+const { createAutoProxyConfig, createFileCookieGetter } = require('dev-proxy-cookie')
+
+createAutoProxyConfig({
+  target: 'http://localhost:8080',
+  getCookie: createFileCookieGetter('./cookie.txt'),
+  useCookie: false,  // 禁用 Cookie 注入
+})
+```
+
 ---
 
 ## 迁移指南
