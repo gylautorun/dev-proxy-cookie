@@ -8,12 +8,14 @@
  */
 import type { IncomingMessage, ServerResponse } from 'http';
 import { CookieReader } from '../utils/cookie-reader';
+import { applyDevCookieHeader } from './apply-dev-cookie-header';
+import { applyDevAuthentications, type AuthenticationItem } from './apply-dev-authentications';
 
 /**
  * Vite 中间件代理 Cookie 插件配置选项
  */
 export interface ViteMiddlewareProxyOptions {
-  /** Cookie 文件路径 */
+  /** Cookie 文件路径， 使用文件方便监听cookie 变化，避免手动启动更新 */
   cookieFile: string;
   /** 默认代理目标地址 */
   target: string;
@@ -27,6 +29,11 @@ export interface ViteMiddlewareProxyOptions {
    * 当使用账号密码登录时，设置为 false，避免覆盖浏览器的登录 Cookie
    */
   useCookie?: boolean;
+  /** 
+   * 自定义鉴权信息数组，每个元素是一个键值对对象，会被注入到请求头中
+   * 例如: [{ 'ticket': 'xxxx' }, { 'X-Custom-Token': 'yyyy' }]
+   */
+  authentications?: AuthenticationItem[];
   /** 
    * 代理路径映射表
    * 键：路径前缀，值：代理目标地址
@@ -80,6 +87,7 @@ export function viteMiddlewareProxy(options: ViteMiddlewareProxyOptions): any {
     target,
     debug = false,
     useCookie = true,
+    authentications = [],
     proxyMap = {},
     proxyPaths = [],
     ignorePaths = [],
@@ -140,23 +148,6 @@ export function viteMiddlewareProxy(options: ViteMiddlewareProxyOptions): any {
           console.log('[ViteMiddlewareProxy] Proxying:', req.method, pathname, '->', proxyTarget);
         }
 
-        // 如果启用 Cookie，读取最新的 Cookie 并注入
-        if (useCookie) {
-          currentCookie = cookieReader.readCookie();
-
-          if (currentCookie) {
-            if (debug) {
-              console.log('[ViteMiddlewareProxy] Injecting cookie:', `(length: ${currentCookie.length})`);
-            }
-            (req as any).headers['cookie'] = currentCookie;
-            (req as any).headers['Cookie'] = currentCookie;
-          } else if (debug) {
-            console.log('[ViteMiddlewareProxy] Cookie file is empty');
-          }
-        } else if (debug) {
-          console.log('[ViteMiddlewareProxy] useCookie is false, skipping cookie injection');
-        }
-
         // 代理请求
         proxyServer.web(req, res, {
           target: proxyTarget,
@@ -164,6 +155,31 @@ export function viteMiddlewareProxy(options: ViteMiddlewareProxyOptions): any {
           secure: false,
           ignorePath: false,
         });
+      });
+
+      // 代理请求前的回调 - 注入 Cookie 和自定义鉴权信息
+      proxyServer.on('proxyReq', (proxyReq: any, req: IncomingMessage) => {
+        if (useCookie) {
+          currentCookie = cookieReader.readCookie();
+
+          if (currentCookie) {
+            if (debug) {
+              console.log('[ViteMiddlewareProxy] Injecting cookie:', `(length: ${currentCookie.length})`);
+            }
+            applyDevCookieHeader(proxyReq, currentCookie);
+          } else if (debug) {
+            console.log('[ViteMiddlewareProxy] Cookie file is empty');
+          }
+        } else if (debug) {
+          console.log('[ViteMiddlewareProxy] useCookie is false, skipping cookie injection');
+        }
+
+        if (authentications && authentications.length > 0) {
+          applyDevAuthentications(proxyReq, authentications);
+          if (debug) {
+            console.log('[ViteMiddlewareProxy] Injecting authentications:', JSON.stringify(authentications));
+          }
+        }
       });
 
       // 错误处理

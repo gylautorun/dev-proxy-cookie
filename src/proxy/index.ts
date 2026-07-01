@@ -8,3 +8,4 @@
 export * from './core';
 export * from './vite-middleware-plugin';
 export * from './vue-proxy-config';
+export * from './apply-dev-authentications';

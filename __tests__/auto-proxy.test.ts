@@ -149,4 +149,40 @@ describe('AutoProxyCookie', () => {
     fs.writeFileSync(cookieFile, 'JSESSIONID=updated');
     expect(reader.readCookie()).toBe('JSESSIONID=updated');
   });
+
+  test('should support authentications option', () => {
+    const autoProxy = createAutoProxyCookie({
+      cookieFile,
+      target: 'http://localhost:8080',
+      authentications: [{ 'ticket': 'xxxx' }, { 'X-Custom-Token': 'yyyy' }],
+    });
+
+    expect(autoProxy).toBeInstanceOf(AutoProxyCookie);
+    expect(autoProxy['options'].authentications).toEqual([{ 'ticket': 'xxxx' }, { 'X-Custom-Token': 'yyyy' }]);
+  });
+
+  test('should support empty authentications array', () => {
+    const autoProxy = createAutoProxyCookie({
+      cookieFile,
+      target: 'http://localhost:8080',
+      authentications: [],
+    });
+
+    expect(autoProxy['options'].authentications).toEqual([]);
+  });
+
+  test('should work with both cookie and authentications', () => {
+    fs.writeFileSync(cookieFile, 'JSESSIONID=abc123');
+    
+    const autoProxy = createAutoProxyCookie({
+      cookieFile,
+      target: 'http://localhost:8080',
+      useCookie: true,
+      authentications: [{ 'ticket': 'xxxx' }],
+    });
+
+    expect(autoProxy).toBeInstanceOf(AutoProxyCookie);
+    expect(autoProxy['options'].useCookie).toBe(true);
+    expect(autoProxy['options'].authentications).toEqual([{ 'ticket': 'xxxx' }]);
+  });
 });

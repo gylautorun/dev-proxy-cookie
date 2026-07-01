@@ -95,4 +95,61 @@ describe('viteMiddlewareProxy', () => {
       expect(plugin).toBeDefined();
     });
   });
+
+  describe('authentications configuration', () => {
+    it('should accept authentications array with single item', () => {
+      const plugin = viteMiddlewareProxy({
+        cookieFile: './cookie.txt',
+        target: 'http://localhost:3000/',
+        authentications: [{ 'ticket': 'xxxx' }],
+      });
+
+      expect(plugin).toBeDefined();
+    });
+
+    it('should accept authentications array with multiple items', () => {
+      const plugin = viteMiddlewareProxy({
+        cookieFile: './cookie.txt',
+        target: 'http://localhost:3000/',
+        authentications: [
+          { 'ticket': 'xxxx' },
+          { 'X-Custom-Token': 'yyyy' },
+        ],
+      });
+
+      expect(plugin).toBeDefined();
+    });
+
+    it('should accept empty authentications array', () => {
+      const plugin = viteMiddlewareProxy({
+        cookieFile: './cookie.txt',
+        target: 'http://localhost:3000/',
+        authentications: [],
+      });
+
+      expect(plugin).toBeDefined();
+    });
+
+    it('should work with both cookie and authentications', () => {
+      const plugin = viteMiddlewareProxy({
+        cookieFile: './cookie.txt',
+        target: 'http://localhost:3000/',
+        useCookie: true,
+        authentications: [{ 'ticket': 'xxxx' }],
+      });
+
+      expect(plugin).toBeDefined();
+    });
+
+    it('should work with authentications only (no cookie)', () => {
+      const plugin = viteMiddlewareProxy({
+        cookieFile: './cookie.txt',
+        target: 'http://localhost:3000/',
+        useCookie: false,
+        authentications: [{ 'ticket': 'xxxx' }],
+      });
+
+      expect(plugin).toBeDefined();
+    });
+  });
 });

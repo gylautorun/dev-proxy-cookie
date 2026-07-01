@@ -15,6 +15,7 @@ import type { ViteDevServer } from 'vite';
 import httpProxy from 'http-proxy';
 import { CookieReader, CookieWatcher, watchCookieFile } from '../utils';
 import { applyDevCookieHeader } from './apply-dev-cookie-header';
+import { applyDevAuthentications, type AuthenticationItem } from './apply-dev-authentications';
 
 /**
  * 错误回调函数类型
@@ -106,6 +107,11 @@ export interface AutoProxyCookieOptions {
    * 当使用账号密码登录时，设置为 false，避免覆盖浏览器的登录 Cookie
    */
   useCookie?: boolean;
+  /** 
+   * 自定义鉴权信息数组，每个元素是一个键值对对象，会被注入到请求头中
+   * 例如: [{ 'ticket': 'xxxx' }, { 'X-Custom-Token': 'yyyy' }]
+   */
+  authentications?: AuthenticationItem[];
 }
 
 /**
@@ -166,6 +172,7 @@ export class AutoProxyCookie {
       cookiePathRewrite: false,
       headers: {},
       useCookie: true,
+      authentications: [],
       ...mergedOptions,
     };
     this.cookieReader = new CookieReader({ cookieFile: options.cookieFile }, options.debug ?? false);
@@ -322,6 +329,13 @@ export class AutoProxyCookie {
       console.log('[AutoProxyCookie] useCookie is false, skipping cookie injection');
     } else {
       console.log('[AutoProxyCookie] No cookie to apply - currentCookie is empty!');
+    }
+
+    const authentications = this.options.authentications || [];
+    if (authentications.length > 0) {
+      console.log('[AutoProxyCookie] Applying authentications headers...');
+      applyDevAuthentications(proxyReq, authentications);
+      console.log('[AutoProxyCookie] Authentications headers applied successfully');
     }
 
     this.log('debug', '[AutoProxyCookie] Proxy Request:', req.method, req.url);

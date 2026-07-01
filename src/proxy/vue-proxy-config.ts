@@ -10,6 +10,7 @@ import type { IncomingMessage } from 'http';
 import * as path from 'path';
 import { CookieReader, watchCookieFile, shouldEnableWatch } from '../utils';
 import { applyDevCookieHeader } from './apply-dev-cookie-header';
+import { applyDevAuthentications, type AuthenticationItem } from './apply-dev-authentications';
 
 /** Options for {@link createFileCookieGetter}. */
 export interface CreateFileCookieGetterOptions {
@@ -58,6 +59,11 @@ export interface VueProxyConfigOptions {
    * 当使用账号密码登录时，设置为 false，避免覆盖浏览器的登录 Cookie
    */
   useCookie?: boolean;
+  /** 
+   * 自定义鉴权信息数组，每个元素是一个键值对对象，会被注入到请求头中
+   * 例如: [{ 'ticket': 'xxxx' }, { 'X-Custom-Token': 'yyyy' }]
+   */
+  authentications?: AuthenticationItem[];
   /** 自定义请求头 */
   headers?: Record<string, string>;
   /** 是否启用 WebSocket 代理 */
@@ -109,6 +115,7 @@ export function createVueProxyConfig(
     getCookie,
     debug = false,
     useCookie = true,
+    authentications = [],
     headers = {},
     ws = false,
     changeOrigin = true,
@@ -135,6 +142,13 @@ export function createVueProxyConfig(
         }
       } else if (debug) {
         console.log('[Proxy Request]', reqPath, req.method, '(useCookie is false, skipping cookie injection)');
+      }
+
+      if (authentications && authentications.length > 0) {
+        applyDevAuthentications(proxyReq, authentications);
+        if (debug) {
+          console.log('[Proxy Request]', reqPath, req.method, '(with authentications)');
+        }
       }
     },
     onError: customOnError || ((err: Error) => {
@@ -223,13 +237,13 @@ export interface AutoProxyConfigOptions extends VueProxyConfigOptions {
  * @returns Vue CLI 代理配置对象映射
  */
 export function createAutoProxyConfig(options: AutoProxyConfigOptions): Record<string, ProxyConfig> {
-  const { target, ignorePaths = [], includePaths = [], additionalProxies = {}, getCookie, debug, headers, useCookie = true } = options;
+  const { target, ignorePaths = [], includePaths = [], additionalProxies = {}, getCookie, debug, headers, useCookie = true, authentications = [] } = options;
 
   const result: Record<string, ProxyConfig> = {};
 
   if (includePaths.length > 0) {
     for (const proxyPath of includePaths) {
-      result[proxyPath] = createVueProxyConfig(target, { getCookie, debug, headers, useCookie });
+      result[proxyPath] = createVueProxyConfig(target, { getCookie, debug, headers, useCookie, authentications });
     }
   } else {
     const defaultProxy: ProxyConfig = {
@@ -256,6 +270,13 @@ export function createAutoProxyConfig(options: AutoProxyConfigOptions): Record<s
         } else if (debug) {
           console.log('[Proxy Request]', reqPath, req.method, '(useCookie is false, skipping cookie injection)');
         }
+
+        if (authentications && authentications.length > 0) {
+          applyDevAuthentications(proxyReq, authentications);
+          if (debug) {
+            console.log('[Proxy Request]', reqPath, req.method, '(with authentications)');
+          }
+        }
       },
       onError: (err: Error) => {
         console.error('\n[Proxy Error]', err.message);
@@ -265,7 +286,7 @@ export function createAutoProxyConfig(options: AutoProxyConfigOptions): Record<s
   }
 
   for (const [proxyPath, proxyTarget] of Object.entries(additionalProxies)) {
-    result[proxyPath] = createVueProxyConfig(proxyTarget, { getCookie, debug, headers, useCookie });
+    result[proxyPath] = createVueProxyConfig(proxyTarget, { getCookie, debug, headers, useCookie, authentications });
   }
 
   return result;
