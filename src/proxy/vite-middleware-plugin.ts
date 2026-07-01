@@ -154,6 +154,7 @@ export function viteMiddlewareProxy(options: ViteMiddlewareProxyOptions): any {
           changeOrigin: true,
           secure: false,
           ignorePath: false,
+          preserveHeaderKeyCase: true,
         });
       });
 
