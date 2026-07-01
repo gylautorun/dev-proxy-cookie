@@ -6,6 +6,7 @@
 
 - ✅ **Cookie 自动注入**：将 Cookie 文件中的 Cookie 自动注入到所有代理请求中
 - ✅ **Cookie 控制**：支持 `useCookie` 参数，可禁用 Cookie 注入，兼容账号密码登录场景
+- ✅ **自定义鉴权**：支持 `authentications` 配置，可注入任意自定义请求头（如 ticket、token、Authorization 等）
 - ✅ **自动代理**：支持自动代理所有请求，无需手动配置多个代理规则
 - ✅ **双框架支持**：同时支持 Vite 和 Vue CLI (vue.config.js)
 - ✅ **灵活配置**：支持自定义代理映射、忽略路径等

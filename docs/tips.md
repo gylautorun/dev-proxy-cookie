@@ -213,6 +213,50 @@ createAutoProxyConfig({
 })
 ```
 
+### 6. 使用自定义鉴权信息（authentications）
+
+当后端服务使用 Cookie 之外的鉴权方式时，可以使用 `authentications` 配置：
+
+```javascript
+// Vite 项目 - 使用 CAS Ticket
+import { viteMiddlewareProxy } from 'dev-proxy-cookie'
+
+viteMiddlewareProxy({
+  cookieFile: './cookie.txt',
+  target: 'http://localhost:8080',
+  authentications: [
+    { 'ticket': 'ST-12345-ABCDE-cas-server' },
+  ],
+})
+
+// Vue CLI 项目 - 使用 JWT Token
+const { createAutoProxyConfig, createFileCookieGetter } = require('dev-proxy-cookie')
+
+createAutoProxyConfig({
+  target: 'http://localhost:8080',
+  getCookie: createFileCookieGetter('./cookie.txt'),
+  authentications: [
+    { 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+  ],
+})
+
+// 组合使用多种鉴权方式
+viteMiddlewareProxy({
+  cookieFile: './cookie.txt',
+  target: 'http://localhost:8080',
+  useCookie: true,  // 使用 Cookie
+  authentications: [
+    { 'ticket': 'ST-12345-ABCDE' },
+    { 'X-Custom-Token': 'abc123' },
+  ],
+})
+```
+
+**注意事项：**
+- `authentications` 中的键值对会直接添加到请求头中
+- 可以同时使用 Cookie 和自定义鉴权信息
+- 适用于 CAS、OAuth、JWT 等多种鉴权场景
+
 ---
 
 ## 迁移指南

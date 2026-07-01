@@ -297,58 +297,6 @@ module.exports = {
 3. 适合需要在浏览器中手动登录的场景
 4. 登录成功后，浏览器的登录状态会被保持和使用
 
-### 场景五：使用自定义鉴权信息（authentications）
-
-当 Cookie 无法满足鉴权需求时，可以使用 `authentications` 配置自定义鉴权头：
-
-```javascript
-const { createAutoProxyConfig, createFileCookieGetter } = require('dev-proxy-cookie')
-
-const getCookie = createFileCookieGetter('./cookie.txt')
-
-module.exports = {
-  devServer: {
-    proxy: createAutoProxyConfig({
-      target: 'http://10.17.53.3:10000',
-      getCookie,
-      authentications: [
-        { 'ticket': 'ST-12345-ABCDE-cas-server' },
-        { 'X-Custom-Token': 'abc123xyz789' },
-      ],
-      ignorePaths: ['/assets/', '/img/', '/public/'],
-    }),
-  },
-}
-```
-
-**使用说明：**
-
-1. `authentications` 是一个数组，每个元素是一个键值对对象
-2. 每个键值对会被添加到请求头中，键作为 header 名称，值作为 header 值
-3. 可以同时使用 Cookie 和自定义鉴权信息
-4. 适合需要多种鉴权方式的场景（如 ticket、token、Authorization 等）
-
-**常见鉴权方式示例：**
-
-```javascript
-// 使用 Authorization Bearer Token
-authentications: [
-  { 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
-]
-
-// 使用自定义 Ticket
-authentications: [
-  { 'ticket': 'ST-12345-ABCDE-cas-server' },
-]
-
-// 使用多种鉴权方式组合
-authentications: [
-  { 'ticket': 'ST-12345-ABCDE-cas-server' },
-  { 'X-User-Id': '12345' },
-  { 'X-App-Key': 'my-app-key' },
-]
-```
-
 ## 启动开发服务器
 
 ```bash

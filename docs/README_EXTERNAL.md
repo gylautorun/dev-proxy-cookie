@@ -19,6 +19,7 @@
 | **Vite 插件支持**   | 开箱即用的 Vite 中间件插件，自动配置代理和 Cookie 注入，兼容所有 Vite 版本 | Vite 项目                  |
 | **Cookie 文件读取** | 支持注释过滤的 Cookie 文件读取器                                      | 开发过程中 Cookie 管理     |
 | **Cookie 控制**      | 支持 `useCookie` 参数，可禁用 Cookie 注入                              | 账号密码登录场景           |
+| **自定义鉴权**      | 支持 `authentications` 配置，可注入任意自定义请求头（ticket、token、Authorization 等） | Cookie 之外的鉴权方式       |
 | **自动代理**        | 可选自动代理所有请求，无需手动配置每个路径                             | 需要代理大量接口的场景     |
 | **双向模式**        | 支持白名单模式（`includePaths`）和黑名单模式（`ignorePaths`）      | 灵活控制代理范围           |
 | **钩子函数**        | 支持 `onProxyReq`、`onProxyRes`、`onError`、`onWsError` 等钩子 | 自定义代理行为             |
@@ -430,6 +431,80 @@ module.exports = {
 2. 请求会使用浏览器发送的原始 Cookie
 3. 适合需要在浏览器中手动登录的场景
 4. 登录成功后，浏览器的登录状态会被保持和使用
+
+### 使用自定义鉴权信息（authentications）
+
+当 Cookie 无法满足鉴权需求时，可以使用 `authentications` 配置自定义鉴权头。这适用于需要 ticket、token、Authorization 等多种鉴权方式的场景。
+
+**Vite 项目：**
+
+```javascript
+import { viteMiddlewareProxy } from '@gylautorun/dev-proxy-cookie';
+
+export default defineConfig({
+  plugins: [
+    viteMiddlewareProxy({
+      cookieFile: './cookie.txt',
+      target: 'http://10.17.53.3',
+      proxyPaths: ['/api'],
+      authentications: [
+        { 'ticket': 'ST-12345-ABCDE-cas-server' },
+        { 'X-Custom-Token': 'abc123xyz789' },
+      ],
+    }),
+  ],
+});
+```
+
+**Vue CLI 项目：**
+
+```javascript
+const { createAutoProxyConfig, createFileCookieGetter } = require('@gylautorun/dev-proxy-cookie');
+
+const getCookie = createFileCookieGetter('./cookie.txt');
+
+module.exports = {
+  devServer: {
+    proxy: createAutoProxyConfig({
+      target: 'http://10.17.53.3:10000',
+      getCookie,
+      authentications: [
+        { 'ticket': 'ST-12345-ABCDE-cas-server' },
+        { 'X-Custom-Token': 'abc123xyz789' },
+      ],
+      ignorePaths: ['/assets/', '/img/', '/public/'],
+    }),
+  },
+};
+```
+
+**使用说明：**
+
+1. `authentications` 是一个数组，每个元素是一个键值对对象
+2. 每个键值对会被添加到请求头中，键作为 header 名称，值作为 header 值
+3. 可以同时使用 Cookie 和自定义鉴权信息
+4. 适合需要多种鉴权方式的场景
+
+**常见鉴权方式示例：**
+
+```javascript
+// 使用 Authorization Bearer Token
+authentications: [
+  { 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+]
+
+// 使用自定义 Ticket
+authentications: [
+  { 'ticket': 'ST-12345-ABCDE-cas-server' },
+]
+
+// 使用多种鉴权方式组合
+authentications: [
+  { 'ticket': 'ST-12345-ABCDE-cas-server' },
+  { 'X-User-Id': '12345' },
+  { 'X-App-Key': 'my-app-key' },
+]
+```
 
 ### Cookie 文件示例
 
